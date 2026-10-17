@@ -46,6 +46,9 @@ const SCHEMA = [
   { name: "eco_fossil", selector: ENTITY }, { name: "produced_today", selector: ENTITY },
   { name: "forecast_today", selector: ENTITY }, { name: "forecast_tomorrow", selector: ENTITY },
   { name: "show_forecast", selector: { boolean: {} } },
+  { name: "sankey_open", selector: { boolean: {} } },
+  { name: "today_import", selector: ENTITY }, { name: "today_export", selector: ENTITY },
+  { name: "today_produced", selector: ENTITY }, { name: "today_consumed", selector: ENTITY },
   { name: "tap_action", selector: { ui_action: {} } },
 ];
 const LABELS: Record<string, string> = {
@@ -53,7 +56,8 @@ const LABELS: Record<string, string> = {
   battery_charge: "Batería · carga", battery_soc: "Batería · SoC", solar_entity: "Solar · potencia", solar_secondary: "Solar · dato secundario",
   home_entity: "Casa · consumo", home_secondary: "Casa · dato secundario", eco_fossil: "Eco · % fósiles de la red",
   produced_today: "Producido hoy (kWh)", forecast_today: "Pronóstico hoy", forecast_tomorrow: "Pronóstico mañana",
-  show_forecast: "Enseñar el pronóstico", tap_action: "Al tocar el fondo",
+  show_forecast: "Enseñar el pronóstico", sankey_open: "Sankey abierto al cargar",
+  today_import: "Hoy · importado (kWh)", today_export: "Hoy · exportado (kWh)", today_produced: "Hoy · producido (kWh)", today_consumed: "Hoy · consumido (kWh)", tap_action: "Al tocar el fondo",
 };
 
 function toForm(c: CardConfig): Record<string, unknown> {
@@ -62,7 +66,8 @@ function toForm(c: CardConfig): Record<string, unknown> {
     battery_discharge: c.battery?.discharge, battery_charge: c.battery?.charge, battery_soc: c.battery?.soc,
     solar_entity: c.solar?.entity, solar_secondary: c.solar?.secondary, home_entity: c.home?.entity, home_secondary: c.home?.secondary,
     eco_fossil: c.eco?.fossil, produced_today: c.produced_today, forecast_today: c.forecast?.today, forecast_tomorrow: c.forecast?.tomorrow,
-    show_forecast: c.show_forecast !== false, tap_action: c.tap_action,
+    show_forecast: c.show_forecast !== false, tap_action: c.tap_action, sankey_open: c.sankey_open === true,
+    today_import: c.today?.import, today_export: c.today?.export, today_produced: c.today?.produced, today_consumed: c.today?.consumed,
   };
 }
 
@@ -78,6 +83,9 @@ function fromForm(c: CardConfig, v: Record<string, unknown>): CardConfig {
     produced_today: s("produced_today"),
     forecast: s("forecast_today") && s("forecast_tomorrow") ? { today: s("forecast_today") as string, tomorrow: s("forecast_tomorrow") as string } : undefined,
     show_forecast: v.show_forecast === false ? false : undefined,
+    sankey_open: v.sankey_open === true ? true : undefined,
+    today: ["today_import", "today_export", "today_produced", "today_consumed"].some((k) => v[k])
+      ? { import: s("today_import"), export: s("today_export"), produced: s("today_produced"), consumed: s("today_consumed") } : undefined,
     tap_action: v.tap_action as CardConfig["tap_action"],
   };
   // fuera las claves vacías, para que el YAML quede limpio

@@ -27,6 +27,8 @@ eco: { fossil: sensor.red_porcentaje_fosiles }     # opcional
 produced_today: sensor.solar_energia_hoy            # opcional (kWh)
 forecast: { today: sensor.pronostico_hoy, tomorrow: sensor.pronostico_manana }   # opcional (kWh)
 show_forecast: true                                  # opcional
+sankey_open: false                                   # opcional: el Sankey sale cerrado y se abre tocando la casa
+today: { import: sensor.red_entrada_hoy, export: sensor.red_salida_hoy, produced: sensor.solar_hoy, consumed: sensor.casa_hoy }   # opcional (kWh)
 tree:
   - entity: sensor.subcuadro_potencia
     name: Subcuadro

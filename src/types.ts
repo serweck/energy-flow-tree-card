@@ -22,6 +22,10 @@ export interface CardConfig {
   forecast?: { today: string; tomorrow: string };
   /** Por defecto true. */
   show_forecast?: boolean;
+  /** El Sankey sale abierto (por defecto, cerrado: se abre tocando la casa). */
+  sankey_open?: boolean;
+  /** Resumen de hoy arriba (kWh): importado, exportado, producido y consumido. */
+  today?: { import?: string; export?: string; produced?: string; consumed?: string };
   tree: NodeConfig[];
   tap_action?: { action: string; navigation_path?: string; [key: string]: unknown };
   clickable_entities?: boolean;

@@ -24,6 +24,12 @@ export const styles = css`
   /* El brillo que corre por dentro de cada corriente del Sankey (su duración la pone el render según la potencia). */
   svg .glow { fill: none; stroke: #fff; stroke-opacity: 0.35; stroke-width: 1.2; stroke-dasharray: 2 10; animation: ef-run 2s linear infinite; }
   @keyframes ef-run { to { stroke-dashoffset: -24; } }
+  /* Resumen de hoy: cuatro cifras en fila, cada una en el color de su energía. */
+  .today { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 0 2px 6px; }
+  .today div { display: flex; align-items: center; justify-content: center; gap: 5px; background: var(--ef-chip); border-radius: 10px;
+               padding: 6px 4px; min-width: 0; }
+  .today svg { width: 18px; height: 18px; flex: none; fill: currentColor; }
+  .today b { font-size: 13px; color: var(--primary-text-color); white-space: nowrap; }
   .hint { color: var(--ef-mut); font-size: 13px; padding: 8px 4px; }
   .forecast { display: flex; gap: 8px; margin-top: 8px; }
   .forecast div { flex: 1; background: var(--ef-chip); border-radius: 10px; padding: 7px 10px; font-size: 12px; color: var(--ef-mut); }

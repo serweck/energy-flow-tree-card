@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0 · 2026-10-17
+
+- El Sankey sale cerrado por defecto (se abre tocando la casa; `sankey_open: true` para que salga abierto).
+- `today`: resumen de hoy arriba con iconos (importado, exportado, producido y consumido, en kWh).
+
 ## 0.5.1 · 2026-10-17
 
 - En el móvil, mantener pulsado ya no saca el menú del navegador.

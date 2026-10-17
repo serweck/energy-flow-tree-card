@@ -1,15 +1,16 @@
 import { LitElement, html, nothing } from "lit";
 import { handleAction, type HomeAssistant } from "custom-card-helpers";
+import { mdiHomeLightningBolt, mdiSolarPower, mdiTransmissionTowerExport, mdiTransmissionTowerImport } from "@mdi/js";
 import { flowSettings, isComplete, validateConfig } from "./config";
 import { layoutCard } from "./layout";
 import { buildTree, readKwh, topFlows, topValues, type Hass } from "./model";
-import { kwh, renderSvg } from "./render";
+import { ENERGY, kwh, renderSvg } from "./render";
 import { styles } from "./styles";
 import type { CardConfig } from "./types";
 import "./editor";
 
 export const CARD_TAG = "energy-flow-tree-card";
-export const CARD_VERSION = "0.5.1";
+export const CARD_VERSION = "0.6.0";
 /** Mantener pulsado más de esto abre el detalle de la entidad en vez de tocar. */
 const HOLD_MS = 500;
 
@@ -31,7 +32,7 @@ export class EnergyFlowTreeCard extends LitElement {
   /** Ancho real del dibujo en px: las bolitas miden siempre 80 px y lo que sobra se lo queda el Sankey (por debajo de 400, se escala). */
   private _width = 400;
   /** Se enseña el Sankey (tocar la casa lo oculta o lo enseña). */
-  private _sankey = true;
+  private _sankey = false;
   private _hold?: ReturnType<typeof setTimeout>;
   private _resize?: ResizeObserver;
   private _observed?: Element;
@@ -65,7 +66,10 @@ export class EnergyFlowTreeCard extends LitElement {
     return { grid: { import: "", export: "" }, battery: { discharge: "", charge: "", soc: "" }, solar: { entity: "" }, home: { entity: "" }, tree: [] };
   }
 
-  setConfig(config: CardConfig): void { this._config = validateConfig(config); }
+  setConfig(config: CardConfig): void {
+    this._config = validateConfig(config);
+    this._sankey = config.sankey_open === true;
+  }
   getCardSize(): number { return 10; }
   getGridOptions(): { columns: number; min_columns: number } { return { columns: 12, min_columns: 6 }; }
 
@@ -109,7 +113,16 @@ export class EnergyFlowTreeCard extends LitElement {
     const showForecast = c.show_forecast !== false && c.forecast;
     return html`<ha-card @click=${() => this._background()}>
       <div class="head"><span class="title">${c.title ?? "Solar"}</span>
-        ${c.produced_today ? html`<span class="produced">Producido hoy ${kwh(produced)}</span>` : nothing}</div>
+        ${c.produced_today && !c.today ? html`<span class="produced">Producido hoy ${kwh(produced)}</span>` : nothing}</div>
+      ${c.today ? html`<div class="today">
+        ${([["imp", "Importado hoy", mdiTransmissionTowerImport, c.today.import, ENERGY.gridIn],
+            ["exp", "Exportado hoy", mdiTransmissionTowerExport, c.today.export, ENERGY.gridOut],
+            ["prod", "Producido hoy", mdiSolarPower, c.today.produced, ENERGY.solar],
+            ["cons", "Consumido hoy", mdiHomeLightningBolt, c.today.consumed, "var(--primary-text-color)"]] as const)
+          .filter(([, , , e]) => e)
+          .map(([cls, label, icon, e, color]) => html`<div class=${cls} title=${label} style=${`color: ${color}`}>
+            <svg viewBox="0 0 24 24" aria-label=${label}><path d=${icon}></path></svg><b>${kwh(readKwh(hass, e))}</b></div>`)}
+      </div>` : nothing}
       <div class="box">${renderSvg(layout, tree, top, topFlows(top), flowSettings(c), {
         solarSecondary: secondary(hass, c.solar.secondary),
         homeSecondary: secondary(hass, c.home.secondary),

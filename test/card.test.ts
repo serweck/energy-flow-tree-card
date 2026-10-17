@@ -6,13 +6,14 @@ import { layoutCard } from "../src/layout";
 import { buildTree } from "../src/model";
 import type { CardConfig } from "../src/types";
 import { CONFIG, EXAMPLE, fakeHass } from "./fixtures";
-import { mdiArrowDown, mdiArrowLeft, mdiArrowRight, mdiArrowUp, mdiBattery50, mdiBatteryCharging90 } from "@mdi/js";
+import { mdiArrowDown, mdiArrowLeft, mdiArrowRight, mdiArrowUp, mdiBattery50, mdiBatteryCharging90, mdiHomeLightningBolt, mdiSolarPower,
+  mdiTransmissionTowerExport, mdiTransmissionTowerImport } from "@mdi/js";
 
 type El = HTMLElement & { setConfig(c: unknown): void; hass: unknown; updateComplete: Promise<boolean> };
 
-async function mount(config: CardConfig = CONFIG, states = EXAMPLE) {
+async function mount(config: CardConfig = { ...CONFIG, sankey_open: true }, states = EXAMPLE) {
   const card = document.createElement("energy-flow-tree-card") as El;
-  card.setConfig(config);
+  card.setConfig({ sankey_open: true, ...config });
   card.hass = fakeHass(states);
   const events: unknown[] = [];
   card.addEventListener("hass-more-info", (e) => events.push((e as CustomEvent).detail));
@@ -185,6 +186,33 @@ describe("tarjeta", () => {
     hold($('[data-ball="grid"]')!);
     hold($('[data-ball="battery"]')!);
     expect(events).toEqual([{ entityId: "sensor.victron_mqtt_system_0_system_grid_power_l1" }, { entityId: "sensor.victron_mqtt_system_0_system_dc_battery_power" }]);
+  });
+
+  it("por defecto el Sankey sale cerrado y tocar la casa lo abre", async () => {
+    const card = document.createElement("energy-flow-tree-card") as El;
+    card.setConfig(CONFIG);
+    card.hass = fakeHass(EXAMPLE);
+    document.body.appendChild(card);
+    await card.updateComplete;
+    const sr = card.shadowRoot!;
+    expect(sr.querySelectorAll("[data-band]")).toHaveLength(0);
+    tap(sr.querySelector('[data-ball="home"]')!);
+    await card.updateComplete;
+    expect(sr.querySelectorAll("[data-band]").length).toBeGreaterThan(0);
+  });
+
+  it("resumen de hoy arriba: importado, exportado, producido y consumido", async () => {
+    const c: CardConfig = { ...CONFIG, today: { import: "sensor.grid_importacion_energia_energy_daily", export: "sensor.grid_exportacion_energia_energy_daily",
+      produced: "sensor.pv_power_energia_energy_daily", consumed: "sensor.consumo_electricidad_energia_energy_daily" } };
+    const { $, $$ } = await mount(c);
+    // sin texto: un icono por cifra (torre con flecha de entrada y de salida, panel solar, casa con rayo) y el nombre como ayuda
+    expect($$(".today > div").map((d) => text(d))).toEqual(["0,1 kWh", "18,2 kWh", "18,4 kWh", "14,3 kWh"]);
+    expect($$(".today > div").map((d) => d.getAttribute("title"))).toEqual(["Importado hoy", "Exportado hoy", "Producido hoy", "Consumido hoy"]);
+    expect($$(".today > div svg path").map((p) => p.getAttribute("d"))).toEqual([mdiTransmissionTowerImport, mdiTransmissionTowerExport, mdiSolarPower, mdiHomeLightningBolt]);
+    expect($(".today .imp")!.getAttribute("style")).toContain("--energy-grid-consumption-color");
+    expect($(".today .exp")!.getAttribute("style")).toContain("--energy-grid-return-color");
+    // con el resumen, el título ya no repite lo producido
+    expect($(".produced")).toBeNull();
   });
 
   it("tocar la casa oculta y vuelve a enseñar el Sankey", async () => {
