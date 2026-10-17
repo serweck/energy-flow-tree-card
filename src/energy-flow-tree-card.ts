@@ -6,6 +6,7 @@ import { buildTree, readKwh, topFlows, topValues, type Hass } from "./model";
 import { kwh, renderSvg } from "./render";
 import { styles } from "./styles";
 import type { CardConfig } from "./types";
+import "./editor";
 
 export const CARD_TAG = "energy-flow-tree-card";
 export const CARD_VERSION = "0.1.0";
