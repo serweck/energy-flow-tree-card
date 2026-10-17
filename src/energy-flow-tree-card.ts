@@ -9,7 +9,9 @@ import type { CardConfig } from "./types";
 import "./editor";
 
 export const CARD_TAG = "energy-flow-tree-card";
-export const CARD_VERSION = "0.4.0";
+export const CARD_VERSION = "0.5.0";
+/** Mantener pulsado más de esto abre el detalle de la entidad en vez de tocar. */
+const HOLD_MS = 500;
 
 function secondary(hass: Hass, entity?: string): string | null {
   const s = entity ? hass.states[entity] : undefined;
@@ -22,12 +24,15 @@ function secondary(hass: Hass, entity?: string): string | null {
 
 export class EnergyFlowTreeCard extends LitElement {
   static styles = styles;
-  static properties = { hass: { attribute: false }, _config: { state: true }, _width: { state: true } };
+  static properties = { hass: { attribute: false }, _config: { state: true }, _width: { state: true }, _sankey: { state: true } };
 
   hass?: HomeAssistant;
   private _config?: CardConfig;
   /** Ancho real del dibujo en px: las bolitas miden siempre 80 px y lo que sobra se lo queda el Sankey (por debajo de 400, se escala). */
   private _width = 400;
+  /** Se enseña el Sankey (tocar la casa lo oculta o lo enseña). */
+  private _sankey = true;
+  private _hold?: ReturnType<typeof setTimeout>;
   private _resize?: ResizeObserver;
   private _observed?: Element;
 
@@ -64,11 +69,28 @@ export class EnergyFlowTreeCard extends LitElement {
   getCardSize(): number { return 10; }
   getGridOptions(): { columns: number; min_columns: number } { return { columns: 12, min_columns: 6 }; }
 
-  private _open = (entity?: string) => (e: Event) => {
-    e.stopPropagation();
+  private _moreInfo(entity?: string): void {
     if (!entity || this._config?.clickable_entities === false) return;
     this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: entity }, bubbles: true, composed: true }));
-  };
+  }
+
+  /** Tocar hace onTap; mantener pulsado HOLD_MS abre el detalle de la entidad. */
+  private _press = (entity?: string, onTap?: () => void) => ({
+    down: (e: Event) => {
+      e.stopPropagation();
+      clearTimeout(this._hold);
+      this._hold = setTimeout(() => { this._hold = undefined; this._moreInfo(entity); }, HOLD_MS);
+    },
+    up: (e: Event) => {
+      e.stopPropagation();
+      if (this._hold === undefined) return;   // ya fue una pulsación larga
+      clearTimeout(this._hold);
+      this._hold = undefined;
+      onTap?.();
+    },
+    cancel: () => { clearTimeout(this._hold); this._hold = undefined; },
+    stop: (e: Event) => e.stopPropagation(),
+  });
 
   private _background(): void {
     if (this.hass && this._config?.tap_action) handleAction(this, this.hass, this._config as never, "tap");
@@ -90,9 +112,9 @@ export class EnergyFlowTreeCard extends LitElement {
       <div class="box">${renderSvg(layout, tree, top, topFlows(top), flowSettings(c), {
         solarSecondary: secondary(hass, c.solar.secondary),
         homeSecondary: secondary(hass, c.home.secondary),
-        entities: { grid: c.grid.import, battery: c.battery.soc, solar: c.solar.entity, home: c.home.entity, eco: c.eco?.fossil },
+        entities: { grid: c.grid.power || c.grid.import, battery: c.battery.power || c.battery.soc, solar: c.solar.entity, home: c.home.entity, eco: c.eco?.fossil },
         names: { grid: c.grid.name ?? "Red", battery: c.battery.name ?? "Batería", solar: c.solar.name ?? "Solar", eco: c.eco?.name ?? "Bajas emisiones" },
-      }, this._open)}</div>
+      }, this._press, this._sankey, () => { this._sankey = !this._sankey; })}</div>
       ${showForecast ? html`<div class="forecast">
         <div>Producción estimada hoy <b>${kwh(readKwh(hass, c.forecast!.today))}</b></div>
         <div>Mañana <b>${kwh(readKwh(hass, c.forecast!.tomorrow))}</b></div></div>` : nothing}

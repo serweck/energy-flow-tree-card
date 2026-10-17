@@ -37,7 +37,9 @@ export interface Extras {
   names: { grid: string; battery: string; solar: string; eco: string };
 }
 
-export type Click = (entity?: string) => (e: Event) => void;
+/** Manejadores de pulsación: tocar hace onTap (si hay) y mantener abre el detalle de la entidad. */
+export interface Press { down: (e: Event) => void; up: (e: Event) => void; cancel: () => void; stop: (e: Event) => void }
+export type Click = (entity?: string, onTap?: () => void) => Press;
 
 /** Texto dentro de una bolita: arriba del icono (top) o debajo, con flecha opcional. */
 interface Line { t: string; cls?: string; style?: string; top?: boolean; arrow?: string; arrowId?: string }
@@ -78,7 +80,8 @@ function nodes(tree: TreeValue): Map<string, TreeValue> {
   return out;
 }
 
-export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: TopFlows, s: FlowSettings, x: Extras, click: Click): TemplateResult {
+export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: TopFlows, s: FlowSettings, x: Extras, click: Click,
+  showSankey = true, onHomeTap?: () => void): TemplateResult {
   const color = colorsOf(tree);
   const byId = nodes(tree);
   const b = l.balls;
@@ -101,13 +104,14 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
 
   /** Bolita de 80 px: icono arriba y textos debajo (o un dato secundario encima del icono), con su nombre fuera. */
   const ball = (id: keyof Layout["balls"], ring: string | TemplateResult, icon: string, iconColor: string,
-    lines: Line[], entity: string | undefined, name?: string, nameBelow = false) => {
+    lines: Line[], entity: string | undefined, name?: string, nameBelow = false, onTap?: () => void) => {
     const p = b[id];
+    const h = click(entity, onTap);
     const top = lines.filter((x) => x.top), rest = lines.filter((x) => !x.top);
     // con dato secundario (temperatura): texto arriba dentro de la bolita, icono y valor debajo; sin él, el icono sube
     const iconY = top.length ? p.cy - 11 : p.cy - 22 - (rest.length > 1 ? 4 : 0);
     const iconSize = top.length ? 20 : 22;
-    return svg`<g data-ball=${id} class="hit" @click=${click(entity)}>
+    return svg`<g data-ball=${id} class="hit" @pointerdown=${h.down} @pointerup=${h.up} @pointercancel=${h.cancel} @click=${h.stop}>
       ${typeof ring === "string"
         ? svg`<circle cx=${p.cx} cy=${p.cy} r=${p.r} style=${`fill: var(--card-background-color, #1c1c1c); stroke: ${ring}`} stroke-width="2"></circle>`
         : ring}
@@ -163,22 +167,26 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
     const cx = bar.x + bar.w / 2;
     const value = bar.depth === 1 ? power(n.watts) : bare(n.watts);
     const dim = bar.zero ? "dim" : "";
+    const h = click(n.entity);
     return svg`<rect data-bar=${bar.id} class=${`hit ${dim}`} x=${cx - w / 2} y=${bar.y} width=${w} height=${bar.h} rx="2" fill=${c}
-        opacity=${bar.zero ? 0.3 : 1} @click=${click(n.entity)}></rect>
-      <text data-label=${bar.id} class=${`hit lbl ${dim}`} x=${cx} y=${bar.y + bar.h + 14} text-anchor="middle" @click=${click(n.entity)}>
+        opacity=${bar.zero ? 0.3 : 1} @pointerdown=${h.down} @pointerup=${h.up} @pointercancel=${h.cancel} @click=${h.stop}></rect>
+      <text data-label=${bar.id} class=${`hit lbl ${dim}`} x=${cx} y=${bar.y + bar.h + 14} text-anchor="middle"
+        @pointerdown=${h.down} @pointerup=${h.up} @pointercancel=${h.cancel} @click=${h.stop}>
         <tspan x=${cx}>${n.name}</tspan><tspan x=${cx} dy="12" class="val"> ${value}</tspan></text>`;
   });
 
   const home = l.bars[0];
-  return svg`<svg class="flow" viewBox=${`0 0 ${l.width} ${l.forecastY}`} preserveAspectRatio="xMidYMin meet">
+  // Sankey oculto (se toca la casa): solo el bloque de arriba
+  const height = showSankey ? l.forecastY : b.home.cy + b.home.r + 14;
+  return svg`<svg class="flow" viewBox=${`0 0 ${l.width} ${height}`} preserveAspectRatio="xMidYMin meet">
     <defs>${gradients}</defs>
     ${(Object.keys(l.topLines) as TopLine[]).map((k) => topLine(k, l.topLines[k]))}
     ${top.lowCarbon !== null ? topLine("gridNonFossil", l.ecoLine) : nothing}
-    <path d=${`M${b.home.cx},${b.home.cy + b.home.r} L${b.home.cx},${home.y}`} stroke=${COLORS.home} stroke-width="2" fill="none"></path>
+    ${showSankey ? svg`<path d=${`M${b.home.cx},${b.home.cy + b.home.r} L${b.home.cx},${home.y}`} stroke=${COLORS.home} stroke-width="2" fill="none"></path>
     ${l.links.map((d) => svg`<path d=${d} stroke="var(--divider-color, #555)" stroke-width="1.5" fill="none"></path>`)}
     ${bands}
     <rect x=${home.x} y=${home.y} width=${home.w} height=${home.h} rx="3" fill=${COLORS.home}></rect>
-    ${bars}
+    ${bars}` : nothing}
     ${ball("grid", gridColor, mdiTransmissionTower, gridColor, [
       { t: power(top.gridIn), cls: "in", style: `fill: ${ENERGY.gridIn}`, arrow: mdiArrowRight, arrowId: "in" },
       { t: power(top.gridOut), cls: "out", style: `fill: ${ENERGY.gridOut}`, arrow: mdiArrowLeft, arrowId: "out" }], x.entities.grid, x.names.grid)}
@@ -189,6 +197,6 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
     ${ball("solar", ENERGY.solar, mdiSolarPower, ENERGY.solar, [...(x.solarSecondary ? [{ t: x.solarSecondary, top: true }] : []), { t: power(top.solar) }],
       x.entities.solar, x.names.solar, true)}
     ${ball("home", homeRing, mdiHome, "var(--primary-text-color)", [...(x.homeSecondary ? [{ t: x.homeSecondary, top: true }] : []), { t: power(tree.watts) }],
-      x.entities.home)}
+      x.entities.home, undefined, false, onHomeTap)}
   </svg>`;
 }

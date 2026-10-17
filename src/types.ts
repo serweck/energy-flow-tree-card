@@ -10,8 +10,10 @@ export interface NodeConfig {
 export interface CardConfig {
   type: string;
   title?: string;
-  grid: { import: string; export: string; name?: string };
-  battery: { discharge: string; charge: string; soc: string; name?: string };
+  /** power: sensor con signo (importa + / exporta −) que se abre al mantener pulsada la red. */
+  grid: { import: string; export: string; name?: string; power?: string };
+  /** power: sensor con signo que se abre al mantener pulsada la batería (si no, el SoC). */
+  battery: { discharge: string; charge: string; soc: string; name?: string; power?: string };
   solar: { entity: string; secondary?: string; name?: string };
   home: { entity: string; secondary?: string };
   /** Porcentaje de combustibles fósiles de la red; la tarjeta enseña 100 − este valor. */

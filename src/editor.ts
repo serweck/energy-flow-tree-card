@@ -39,8 +39,8 @@ const ENTITY = { entity: { domain: "sensor" } };
 /** Campos de arriba para ha-form, con nombres planos (grid_import…) que se pasan a la configuración anidada. */
 const SCHEMA = [
   { name: "title", selector: { text: {} } },
-  { name: "grid_import", selector: ENTITY }, { name: "grid_export", selector: ENTITY },
-  { name: "battery_discharge", selector: ENTITY }, { name: "battery_charge", selector: ENTITY }, { name: "battery_soc", selector: ENTITY },
+  { name: "grid_import", selector: ENTITY }, { name: "grid_export", selector: ENTITY }, { name: "grid_power", selector: ENTITY },
+  { name: "battery_discharge", selector: ENTITY }, { name: "battery_charge", selector: ENTITY }, { name: "battery_soc", selector: ENTITY }, { name: "battery_power", selector: ENTITY },
   { name: "solar_entity", selector: ENTITY }, { name: "solar_secondary", selector: ENTITY },
   { name: "home_entity", selector: ENTITY }, { name: "home_secondary", selector: ENTITY },
   { name: "eco_fossil", selector: ENTITY }, { name: "produced_today", selector: ENTITY },
@@ -49,7 +49,7 @@ const SCHEMA = [
   { name: "tap_action", selector: { ui_action: {} } },
 ];
 const LABELS: Record<string, string> = {
-  title: "Título", grid_import: "Red · entrada", grid_export: "Red · salida", battery_discharge: "Batería · descarga",
+  title: "Título", grid_import: "Red · entrada", grid_export: "Red · salida", grid_power: "Red · potencia con signo (al mantener)", battery_power: "Batería · potencia con signo (al mantener)", battery_discharge: "Batería · descarga",
   battery_charge: "Batería · carga", battery_soc: "Batería · SoC", solar_entity: "Solar · potencia", solar_secondary: "Solar · dato secundario",
   home_entity: "Casa · consumo", home_secondary: "Casa · dato secundario", eco_fossil: "Eco · % fósiles de la red",
   produced_today: "Producido hoy (kWh)", forecast_today: "Pronóstico hoy", forecast_tomorrow: "Pronóstico mañana",
@@ -58,7 +58,7 @@ const LABELS: Record<string, string> = {
 
 function toForm(c: CardConfig): Record<string, unknown> {
   return {
-    title: c.title, grid_import: c.grid?.import, grid_export: c.grid?.export,
+    title: c.title, grid_import: c.grid?.import, grid_export: c.grid?.export, grid_power: c.grid?.power, battery_power: c.battery?.power,
     battery_discharge: c.battery?.discharge, battery_charge: c.battery?.charge, battery_soc: c.battery?.soc,
     solar_entity: c.solar?.entity, solar_secondary: c.solar?.secondary, home_entity: c.home?.entity, home_secondary: c.home?.secondary,
     eco_fossil: c.eco?.fossil, produced_today: c.produced_today, forecast_today: c.forecast?.today, forecast_tomorrow: c.forecast?.tomorrow,
@@ -70,8 +70,8 @@ function fromForm(c: CardConfig, v: Record<string, unknown>): CardConfig {
   const s = (k: string) => (v[k] ? String(v[k]) : undefined);
   const out: CardConfig = {
     ...c, title: s("title"),
-    grid: { import: s("grid_import") ?? "", export: s("grid_export") ?? "" },
-    battery: { discharge: s("battery_discharge") ?? "", charge: s("battery_charge") ?? "", soc: s("battery_soc") ?? "" },
+    grid: { ...c.grid, import: s("grid_import") ?? "", export: s("grid_export") ?? "", power: s("grid_power") },
+    battery: { ...c.battery, discharge: s("battery_discharge") ?? "", charge: s("battery_charge") ?? "", soc: s("battery_soc") ?? "", power: s("battery_power") },
     solar: { entity: s("solar_entity") ?? "", secondary: s("solar_secondary") },
     home: { entity: s("home_entity") ?? "", secondary: s("home_secondary") },
     eco: s("eco_fossil") ? { fossil: s("eco_fossil") as string } : undefined,

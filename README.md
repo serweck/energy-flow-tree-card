@@ -6,7 +6,8 @@ Tarjeta Lovelace para Home Assistant que junta dos formas de ver la energía de 
 - **Debajo de la casa, un Sankey vertical** que reparte el consumo en todos los niveles que quieras: cada consumo puede tener sus propios consumos dentro (un subcuadro, un magnetotérmico de luces…). El grosor de cada corriente es su potencia, con un brillo que corre por dentro.
 - **Otros** = consumo de la casa − suma del primer nivel. Cada consumo con hijos tiene su **resto** = consumo − suma de sus hijos. Ninguno de los dos baja de 0.
 - **Pronóstico** de hoy y de mañana al pie (opcional) y lo producido hoy en el título.
-- Tocar una bolita, una barra o su nombre abre el detalle de su entidad.
+- Mantener pulsada una bolita, una barra o su nombre abre el detalle de su entidad; tocar la casa oculta o enseña el Sankey.
+- `grid.power` / `battery.power` (opcionales): sensor con signo que se abre al mantener la red o la batería.
 
 ## Instalación (HACS)
 

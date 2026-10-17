@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import "../src/energy-flow-tree-card";
 import { flowSettings } from "../src/config";
 import { flowDuration } from "../src/flow";
@@ -23,6 +23,11 @@ async function mount(config: CardConfig = CONFIG, states = EXAMPLE) {
   const $$ = (s: string) => Array.from(root.querySelectorAll(s)) as (SVGElement | HTMLElement)[];
   return { card, $, $$, events };
 }
+// jsdom no trae PointerEvent: un MouseEvent con el mismo tipo llega igual a los manejadores.
+const ptr = (el: Element, type: string) => el.dispatchEvent(new MouseEvent(type, { bubbles: true, composed: true }));
+const tap = (el: Element) => { ptr(el, "pointerdown"); ptr(el, "pointerup"); };
+function hold(el: Element) { ptr(el, "pointerdown"); vi.advanceTimersByTime(600); ptr(el, "pointerup"); }
+afterEach(() => vi.useRealTimers());
 const text = (el: Element | null) => el?.textContent?.replace(/\s+/g, " ").trim();
 const S = flowSettings(CONFIG);
 
@@ -161,17 +166,44 @@ describe("tarjeta", () => {
     expect($(".forecast")).toBeNull();
   });
 
-  it("clic en la barra del ACS abre su detalle; Otros no hace nada", async () => {
+  it("tocar no abre nada; mantener pulsado abre el detalle (bolitas y barras); Otros no tiene detalle", async () => {
     const { $, events } = await mount();
-    $('[data-bar="0.0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
-    $('[data-bar="others"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
-    $('[data-ball="solar"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    vi.useFakeTimers();
+    tap($('[data-ball="solar"]')!);
+    tap($('[data-bar="0.0"]')!);
+    expect(events).toEqual([]);
+    hold($('[data-bar="0.0"]')!);
+    hold($('[data-bar="others"]')!);
+    hold($('[data-ball="solar"]')!);
     expect(events).toEqual([{ entityId: "sensor.calentador_agua_power" }, { entityId: "sensor.victron_mqtt_system_0_system_dc_pv_power" }]);
+  });
+
+  it("mantener la red abre el sensor con signo (importa + / exporta −) si lo hay; la batería, el suyo", async () => {
+    const { $, events } = await mount({ ...CONFIG, grid: { ...CONFIG.grid, power: "sensor.victron_mqtt_system_0_system_grid_power_l1" },
+      battery: { ...CONFIG.battery, power: "sensor.victron_mqtt_system_0_system_dc_battery_power" } });
+    vi.useFakeTimers();
+    hold($('[data-ball="grid"]')!);
+    hold($('[data-ball="battery"]')!);
+    expect(events).toEqual([{ entityId: "sensor.victron_mqtt_system_0_system_grid_power_l1" }, { entityId: "sensor.victron_mqtt_system_0_system_dc_battery_power" }]);
+  });
+
+  it("tocar la casa oculta y vuelve a enseñar el Sankey", async () => {
+    const { card, $, $$ } = await mount();
+    expect($$("[data-band]").length).toBeGreaterThan(0);
+    tap($('[data-ball="home"]')!);
+    await card.updateComplete;
+    expect($$("[data-band]")).toHaveLength(0);
+    expect($$("[data-bar]")).toHaveLength(0);
+    expect(Number($("svg.flow")!.getAttribute("viewBox")!.split(" ")[3])).toBeLessThan(320);
+    tap($('[data-ball="home"]')!);
+    await card.updateComplete;
+    expect($$("[data-band]").length).toBeGreaterThan(0);
   });
 
   it("clickable_entities: false no abre detalles", async () => {
     const { $, events } = await mount({ ...CONFIG, clickable_entities: false });
-    $('[data-bar="0.0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    vi.useFakeTimers();
+    hold($('[data-bar="0.0"]')!);
     expect(events).toEqual([]);
   });
 

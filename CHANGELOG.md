@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 · 2026-10-17
+
+- Tocar una bolita o una barra ya no abre la entidad: se abre manteniendo pulsado.
+- Tocar la casa oculta o enseña el Sankey.
+- `grid.power` y `battery.power`: sensor con signo que se abre al mantener la red o la batería (su gráfica enseña importación y exportación, o carga y descarga).
+
 ## 0.4.0 · 2026-10-17
 
 - Batería: el porcentaje encima del icono, e icono por niveles de 10 % (con rayo mientras carga).
