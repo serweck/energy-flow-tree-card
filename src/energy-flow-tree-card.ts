@@ -9,7 +9,7 @@ import type { CardConfig } from "./types";
 import "./editor";
 
 export const CARD_TAG = "energy-flow-tree-card";
-export const CARD_VERSION = "0.5.0";
+export const CARD_VERSION = "0.5.1";
 /** Mantener pulsado más de esto abre el detalle de la entidad en vez de tocar. */
 const HOLD_MS = 500;
 
@@ -89,7 +89,8 @@ export class EnergyFlowTreeCard extends LitElement {
       onTap?.();
     },
     cancel: () => { clearTimeout(this._hold); this._hold = undefined; },
-    stop: (e: Event) => e.stopPropagation(),
+    // sin el menú del navegador al mantener pulsado en el móvil
+    stop: (e: Event) => { e.stopPropagation(); if (e.type === "contextmenu") e.preventDefault(); },
   });
 
   private _background(): void {

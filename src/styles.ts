@@ -20,7 +20,7 @@ export const styles = css`
   svg text.name { fill: var(--ef-mut); font-size: 12px; }
   svg text.lbl { font-size: 9.5px; }
   svg .dim { opacity: 0.45; }
-  svg .hit { cursor: pointer; }
+  svg .hit { cursor: pointer; -webkit-touch-callout: none; }
   /* El brillo que corre por dentro de cada corriente del Sankey (su duración la pone el render según la potencia). */
   svg .glow { fill: none; stroke: #fff; stroke-opacity: 0.35; stroke-width: 1.2; stroke-dasharray: 2 10; animation: ef-run 2s linear infinite; }
   @keyframes ef-run { to { stroke-dashoffset: -24; } }

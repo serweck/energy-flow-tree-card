@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1 · 2026-10-17
+
+- En el móvil, mantener pulsado ya no saca el menú del navegador.
+
 ## 0.5.0 · 2026-10-17
 
 - Tocar una bolita o una barra ya no abre la entidad: se abre manteniendo pulsado.

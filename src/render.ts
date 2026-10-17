@@ -111,7 +111,7 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
     // con dato secundario (temperatura): texto arriba dentro de la bolita, icono y valor debajo; sin él, el icono sube
     const iconY = top.length ? p.cy - 11 : p.cy - 22 - (rest.length > 1 ? 4 : 0);
     const iconSize = top.length ? 20 : 22;
-    return svg`<g data-ball=${id} class="hit" @pointerdown=${h.down} @pointerup=${h.up} @pointercancel=${h.cancel} @click=${h.stop}>
+    return svg`<g data-ball=${id} class="hit" @pointerdown=${h.down} @pointerup=${h.up} @pointercancel=${h.cancel} @click=${h.stop} @contextmenu=${h.stop}>
       ${typeof ring === "string"
         ? svg`<circle cx=${p.cx} cy=${p.cy} r=${p.r} style=${`fill: var(--card-background-color, #1c1c1c); stroke: ${ring}`} stroke-width="2"></circle>`
         : ring}
@@ -169,9 +169,9 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
     const dim = bar.zero ? "dim" : "";
     const h = click(n.entity);
     return svg`<rect data-bar=${bar.id} class=${`hit ${dim}`} x=${cx - w / 2} y=${bar.y} width=${w} height=${bar.h} rx="2" fill=${c}
-        opacity=${bar.zero ? 0.3 : 1} @pointerdown=${h.down} @pointerup=${h.up} @pointercancel=${h.cancel} @click=${h.stop}></rect>
+        opacity=${bar.zero ? 0.3 : 1} @pointerdown=${h.down} @pointerup=${h.up} @pointercancel=${h.cancel} @click=${h.stop} @contextmenu=${h.stop}></rect>
       <text data-label=${bar.id} class=${`hit lbl ${dim}`} x=${cx} y=${bar.y + bar.h + 14} text-anchor="middle"
-        @pointerdown=${h.down} @pointerup=${h.up} @pointercancel=${h.cancel} @click=${h.stop}>
+        @pointerdown=${h.down} @pointerup=${h.up} @pointercancel=${h.cancel} @click=${h.stop} @contextmenu=${h.stop}>
         <tspan x=${cx}>${n.name}</tspan><tspan x=${cx} dy="12" class="val"> ${value}</tspan></text>`;
   });
 
