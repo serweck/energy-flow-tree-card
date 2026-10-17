@@ -9,7 +9,7 @@ import type { CardConfig } from "./types";
 import "./editor";
 
 export const CARD_TAG = "energy-flow-tree-card";
-export const CARD_VERSION = "0.2.0";
+export const CARD_VERSION = "0.3.0";
 
 function secondary(hass: Hass, entity?: string): string | null {
   const s = entity ? hass.states[entity] : undefined;
@@ -22,10 +22,38 @@ function secondary(hass: Hass, entity?: string): string | null {
 
 export class EnergyFlowTreeCard extends LitElement {
   static styles = styles;
-  static properties = { hass: { attribute: false }, _config: { state: true } };
+  static properties = { hass: { attribute: false }, _config: { state: true }, _width: { state: true } };
 
   hass?: HomeAssistant;
   private _config?: CardConfig;
+  /** Ancho real del dibujo en px: las bolitas miden siempre 80 px y lo que sobra se lo queda el Sankey (por debajo de 400, se escala). */
+  private _width = 400;
+  private _resize?: ResizeObserver;
+  private _observed?: Element;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (typeof ResizeObserver === "undefined") return;
+    this._resize = new ResizeObserver(([e]) => {
+      const w = Math.max(400, Math.round(e.contentRect.width));
+      if (Math.abs(w - this._width) > 4) this._width = w;
+    });
+  }
+
+  /** La caja del dibujo aparece cuando hay datos: se observa en cuanto existe (y si se vuelve a crear). */
+  protected updated(): void {
+    const box = this.shadowRoot?.querySelector(".box") ?? undefined;
+    if (box && box !== this._observed) {
+      if (this._observed) this._resize?.unobserve(this._observed);
+      this._resize?.observe(box);
+      this._observed = box;
+    }
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._resize?.disconnect();
+  }
 
   static getConfigElement(): HTMLElement { return document.createElement(`${CARD_TAG}-editor`); }
   static getStubConfig(): Partial<CardConfig> {
@@ -53,18 +81,18 @@ export class EnergyFlowTreeCard extends LitElement {
     const hass = this.hass as unknown as Hass;
     const tree = buildTree(c, hass);
     const top = topValues(c, hass);
-    const layout = layoutCard(tree);
+    const layout = layoutCard(tree, this._width);
     const produced = c.produced_today ? readKwh(hass, c.produced_today) : null;
     const showForecast = c.show_forecast !== false && c.forecast;
     return html`<ha-card @click=${() => this._background()}>
       <div class="head"><span class="title">${c.title ?? "Solar"}</span>
         ${c.produced_today ? html`<span class="produced">Producido hoy ${kwh(produced)}</span>` : nothing}</div>
-      ${renderSvg(layout, tree, top, topFlows(top), flowSettings(c), {
+      <div class="box">${renderSvg(layout, tree, top, topFlows(top), flowSettings(c), {
         solarSecondary: secondary(hass, c.solar.secondary),
         homeSecondary: secondary(hass, c.home.secondary),
         entities: { grid: c.grid.import, battery: c.battery.soc, solar: c.solar.entity, home: c.home.entity, eco: c.eco?.fossil },
         names: { grid: c.grid.name ?? "Red", battery: c.battery.name ?? "Batería", solar: c.solar.name ?? "Solar", eco: c.eco?.name ?? "Bajas emisiones" },
-      }, this._open)}
+      }, this._open)}</div>
       ${showForecast ? html`<div class="forecast">
         <div>Producción estimada hoy <b>${kwh(readKwh(hass, c.forecast!.today))}</b></div>
         <div>Mañana <b>${kwh(readKwh(hass, c.forecast!.tomorrow))}</b></div></div>` : nothing}

@@ -83,14 +83,16 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
     lines: { t: string; cls?: string; style?: string }[], entity: string | undefined, name?: string, nameBelow = false) => {
     const p = b[id];
     const top = lines.filter((x) => x.cls === "sec"), rest = lines.filter((x) => x.cls !== "sec");
-    const iconY = p.cy - 20 + (top.length ? 6 : 0) - (rest.length > 1 ? 4 : 0);
+    // con dato secundario (temperatura): texto arriba dentro de la bolita, icono y valor debajo; sin él, el icono sube
+    const iconY = top.length ? p.cy - 11 : p.cy - 22 - (rest.length > 1 ? 4 : 0);
+    const iconSize = top.length ? 20 : 22;
     return svg`<g data-ball=${id} class="hit" @click=${click(entity)}>
       ${typeof ring === "string"
         ? svg`<circle cx=${p.cx} cy=${p.cy} r=${p.r} style=${`fill: var(--card-background-color, #1c1c1c); stroke: ${ring}`} stroke-width="2"></circle>`
         : ring}
-      ${top.map((x) => svg`<text x=${p.cx} y=${p.cy - 24} text-anchor="middle" class="sec">${x.t}</text>`)}
-      <svg class="icon" x=${p.cx - 11} y=${iconY} width="22" height="22" viewBox="0 0 24 24"><path d=${icon} style=${`fill: ${iconColor}`}></path></svg>
-      ${rest.map((x, i) => svg`<text x=${p.cx} y=${iconY + 36 + i * 13} text-anchor="middle" class=${`val ${x.cls ?? ""}`} style=${x.style ?? ""}>${x.t}</text>`)}
+      ${top.map((x) => svg`<text x=${p.cx} y=${p.cy - 15} text-anchor="middle" class="sec">${x.t}</text>`)}
+      <svg class="icon" x=${p.cx - iconSize / 2} y=${iconY} width=${iconSize} height=${iconSize} viewBox="0 0 24 24"><path d=${icon} style=${`fill: ${iconColor}`}></path></svg>
+      ${rest.map((x, i) => svg`<text x=${p.cx} y=${iconY + iconSize + 14 + i * 13} text-anchor="middle" class=${`val ${x.cls ?? ""}`} style=${x.style ?? ""}>${x.t}</text>`)}
       ${name ? svg`<text class="name" x=${p.cx} y=${nameBelow ? p.cy + p.r + 15 : p.cy - p.r - 7} text-anchor="middle">${name}</text>` : nothing}
     </g>`;
   };
@@ -158,9 +160,10 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
     ${ball("grid", gridColor, mdiTransmissionTower, gridColor, [
       { t: `→ ${power(top.gridIn)}`, cls: "in", style: `fill: ${ENERGY.gridIn}` },
       { t: `← ${power(top.gridOut)}`, cls: "out", style: `fill: ${ENERGY.gridOut}` }], x.entities.grid, x.names.grid)}
-    ${top.lowCarbon !== null ? ball("eco", ENERGY.nonFossil, mdiLeaf, ENERGY.nonFossil, [{ t: power(flows.gridNonFossil) }], x.entities.eco, x.names.eco) : nothing}
+    ${top.lowCarbon !== null ? ball("eco", ENERGY.nonFossil, mdiLeaf, ENERGY.nonFossil, [{ t: power(flows.gridNonFossil) }], x.entities.eco) : nothing}
     ${ball("battery", battColor, batteryIcon(top.soc), battColor, [
-      { t: top.soc !== null ? `${Math.round(top.soc)} %` : "—", cls: "soc" }, { t: batt }], x.entities.battery, x.names.battery, true)}
+      { t: top.soc !== null ? `${Math.round(top.soc)} %` : "—", cls: "soc", style: `fill: ${battColor}` },
+      { t: batt, cls: "flow-val", style: `fill: ${battColor}` }], x.entities.battery, x.names.battery, true)}
     ${ball("solar", ENERGY.solar, mdiSolarPower, ENERGY.solar, [...(x.solarSecondary ? [{ t: x.solarSecondary, cls: "sec" }] : []), { t: power(top.solar) }],
       x.entities.solar, x.names.solar, true)}
     ${ball("home", homeRing, mdiHome, "var(--primary-text-color)", [...(x.homeSecondary ? [{ t: x.homeSecondary, cls: "sec" }] : []), { t: power(tree.watts) }],

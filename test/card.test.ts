@@ -91,9 +91,33 @@ describe("tarjeta", () => {
     expect(text($('[data-ball="grid"] .name'))).toBe("Red");
     expect(text($('[data-ball="solar"] .name'))).toBe("Solar");
     expect(text($('[data-ball="battery"] .name'))).toBe("Batería");
-    expect(text($('[data-ball="eco"] .name'))).toBe("Bajas emisiones");
+    expect($('[data-ball="eco"] .name')).toBeNull();   // el usuario no quiere título en bajas emisiones
     const { $: $2 } = await mount({ ...CONFIG, grid: { ...CONFIG.grid, name: "Grid" } });
     expect(text($2('[data-ball="grid"] .name'))).toBe("Grid");
+  });
+
+  it("la batería va en rosa al cargar y en verde azulado al descargar, también su porcentaje y su valor", async () => {
+    const { $ } = await mount();   // cargando 1,1 kW
+    for (const sel of ['[data-ball="battery"] circle', '[data-ball="battery"] .soc', '[data-ball="battery"] .flow-val'])
+      expect($(sel)!.getAttribute("style")).toContain("--energy-battery-in-color");
+    const { $: $2 } = await mount(CONFIG, { ...EXAMPLE, "sensor.bateria_carga": "0", "sensor.bateria_descarga": "800" });
+    for (const sel of ['[data-ball="battery"] circle', '[data-ball="battery"] .soc', '[data-ball="battery"] .flow-val'])
+      expect($2(sel)!.getAttribute("style")).toContain("--energy-battery-out-color");
+  });
+
+  it("la temperatura va dentro de la bolita, no pegada al borde", async () => {
+    const { $ } = await mount();
+    const y = Number($('[data-ball="solar"] text.sec')!.getAttribute("y"));
+    expect(y).toBeGreaterThanOrEqual(176 - 20);
+    expect(y).toBeLessThanOrEqual(176 - 10);
+  });
+
+  it("las bolitas no crecen con la tarjeta: el dibujo toma el ancho real y centra el bloque de arriba", async () => {
+    const { card, $ } = await mount();
+    (card as unknown as { _width: number })._width = 800;
+    await card.updateComplete;
+    expect($("svg.flow")!.getAttribute("viewBox")!.split(" ")[2]).toBe("800");
+    expect($('[data-ball="home"] circle')!.getAttribute("cx")).toBe("400");
   });
 
   it("el anillo de la casa se reparte por origen: solar, batería, red limpia y red fósil", async () => {

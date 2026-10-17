@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 · 2026-10-17
+
+- Las bolitas miden siempre 80 px, como power-flow-card-plus: en pantallas anchas ya no crecen y el espacio lo aprovecha el Sankey.
+- Batería: círculo, porcentaje y valor en el color de entrada (cargando) o de salida (descargando).
+- La temperatura va más abajo, dentro de la bolita.
+- Bajas emisiones sin título.
+
 ## 0.2.0 · 2026-10-17
 
 - Bolitas como power-flow-card-plus: 80 px, iconos de MDI (torre eléctrica, casa, panel solar, batería según la carga y hoja) y nombre fuera del círculo (`name` en red, batería, solar y eco).
