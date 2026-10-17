@@ -1,6 +1,6 @@
 {
   "name": "energy-flow-tree-card",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Tarjeta Lovelace con el flujo solar (red, batería, solar, casa) y un Sankey de consumos anidados para Home Assistant",
   "type": "module",
   "main": "dist/energy-flow-tree-card.js",

@@ -1,5 +1,10 @@
 import { svg, nothing, type TemplateResult } from "lit";
-import { mdiBattery, mdiBatteryHigh, mdiBatteryLow, mdiBatteryMedium, mdiBatteryOutline, mdiHome, mdiLeaf, mdiSolarPower, mdiTransmissionTower } from "@mdi/js";
+import {
+  mdiArrowDown, mdiArrowLeft, mdiArrowRight, mdiArrowUp, mdiBattery, mdiBattery10, mdiBattery20, mdiBattery30, mdiBattery40, mdiBattery50,
+  mdiBattery60, mdiBattery70, mdiBattery80, mdiBattery90, mdiBatteryCharging10, mdiBatteryCharging20, mdiBatteryCharging30, mdiBatteryCharging40,
+  mdiBatteryCharging50, mdiBatteryCharging60, mdiBatteryCharging70, mdiBatteryCharging80, mdiBatteryCharging90, mdiBatteryCharging100,
+  mdiBatteryChargingOutline, mdiBatteryOutline, mdiHome, mdiLeaf, mdiSolarPower, mdiTransmissionTower,
+} from "@mdi/js";
 import { flowDuration, lineState } from "./flow";
 import type { Layout, TopLine } from "./layout";
 import type { TopFlows, TopValues, TreeValue } from "./model";
@@ -34,6 +39,9 @@ export interface Extras {
 
 export type Click = (entity?: string) => (e: Event) => void;
 
+/** Texto dentro de una bolita: arriba del icono (top) o debajo, con flecha opcional. */
+interface Line { t: string; cls?: string; style?: string; top?: boolean; arrow?: string; arrowId?: string }
+
 const LINE_COLOR: Record<keyof TopFlows, string> = {
   solarToHome: ENERGY.solar, solarToBattery: ENERGY.batteryIn, solarToGrid: ENERGY.gridOut,
   gridToHome: ENERGY.gridIn, gridToBattery: ENERGY.batteryIn, batteryToHome: ENERGY.batteryOut, batteryToGrid: ENERGY.gridOut,
@@ -42,9 +50,14 @@ const LINE_COLOR: Record<keyof TopFlows, string> = {
 const R = 40;
 const CIRC = 2 * Math.PI * R;
 
-function batteryIcon(soc: number | null): string {
-  if (soc === null) return mdiBatteryOutline;
-  return soc >= 90 ? mdiBattery : soc >= 65 ? mdiBatteryHigh : soc >= 35 ? mdiBatteryMedium : soc >= 10 ? mdiBatteryLow : mdiBatteryOutline;
+const BATTERY = [mdiBatteryOutline, mdiBattery10, mdiBattery20, mdiBattery30, mdiBattery40, mdiBattery50, mdiBattery60, mdiBattery70, mdiBattery80, mdiBattery90, mdiBattery];
+const BATTERY_CHARGING = [mdiBatteryChargingOutline, mdiBatteryCharging10, mdiBatteryCharging20, mdiBatteryCharging30, mdiBatteryCharging40,
+  mdiBatteryCharging50, mdiBatteryCharging60, mdiBatteryCharging70, mdiBatteryCharging80, mdiBatteryCharging90, mdiBatteryCharging100];
+
+/** Icono de batería por niveles de 10 % (con rayo si está cargando). */
+function batteryIcon(soc: number | null, charging: boolean): string {
+  const level = soc === null ? 0 : Math.max(0, Math.min(10, Math.floor(soc / 10)));
+  return (charging ? BATTERY_CHARGING : BATTERY)[level];
 }
 
 function colorsOf(tree: TreeValue): Map<string, string> {
@@ -78,11 +91,19 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
     </g>`;
   };
 
+  /** Una línea de valor: texto centrado o, con flecha, el icono MDI de la flecha delante (como power-flow-card-plus). */
+  const valueLine = (x: Line, cx: number, y: number) => {
+    if (!x.arrow) return svg`<text x=${cx} y=${y} text-anchor="middle" class=${`val ${x.cls ?? ""}`} style=${x.style ?? ""}>${x.t}</text>`;
+    const tw = x.t.length * 6.4, total = 13 + tw, x0 = cx - total / 2;
+    return svg`<svg data-arrow=${x.arrowId ?? "flow"} x=${x0} y=${y - 10} width="12" height="12" viewBox="0 0 24 24"><path d=${x.arrow} style=${x.style ?? ""}></path></svg>
+      <text x=${x0 + 13} y=${y} text-anchor="start" class=${`val ${x.cls ?? ""}`} style=${x.style ?? ""}>${x.t}</text>`;
+  };
+
   /** Bolita de 80 px: icono arriba y textos debajo (o un dato secundario encima del icono), con su nombre fuera. */
   const ball = (id: keyof Layout["balls"], ring: string | TemplateResult, icon: string, iconColor: string,
-    lines: { t: string; cls?: string; style?: string }[], entity: string | undefined, name?: string, nameBelow = false) => {
+    lines: Line[], entity: string | undefined, name?: string, nameBelow = false) => {
     const p = b[id];
-    const top = lines.filter((x) => x.cls === "sec"), rest = lines.filter((x) => x.cls !== "sec");
+    const top = lines.filter((x) => x.top), rest = lines.filter((x) => !x.top);
     // con dato secundario (temperatura): texto arriba dentro de la bolita, icono y valor debajo; sin él, el icono sube
     const iconY = top.length ? p.cy - 11 : p.cy - 22 - (rest.length > 1 ? 4 : 0);
     const iconSize = top.length ? 20 : 22;
@@ -90,9 +111,9 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
       ${typeof ring === "string"
         ? svg`<circle cx=${p.cx} cy=${p.cy} r=${p.r} style=${`fill: var(--card-background-color, #1c1c1c); stroke: ${ring}`} stroke-width="2"></circle>`
         : ring}
-      ${top.map((x) => svg`<text x=${p.cx} y=${p.cy - 15} text-anchor="middle" class="sec">${x.t}</text>`)}
+      ${top.map((x) => svg`<text x=${p.cx} y=${p.cy - 15} text-anchor="middle" class=${x.cls ?? "sec"} style=${x.style ?? ""}>${x.t}</text>`)}
       <svg class="icon" x=${p.cx - iconSize / 2} y=${iconY} width=${iconSize} height=${iconSize} viewBox="0 0 24 24"><path d=${icon} style=${`fill: ${iconColor}`}></path></svg>
-      ${rest.map((x, i) => svg`<text x=${p.cx} y=${iconY + iconSize + 14 + i * 13} text-anchor="middle" class=${`val ${x.cls ?? ""}`} style=${x.style ?? ""}>${x.t}</text>`)}
+      ${rest.map((x, i) => valueLine(x, p.cx, iconY + iconSize + 14 + i * 13))}
       ${name ? svg`<text class="name" x=${p.cx} y=${nameBelow ? p.cy + p.r + 15 : p.cy - p.r - 7} text-anchor="middle">${name}</text>` : nothing}
     </g>`;
   };
@@ -117,7 +138,8 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
     }) : nothing}`;
 
   const charging = top.charge > 0, discharging = top.discharge > 0;
-  const batt = charging ? `↓ ${power(top.charge)}` : discharging ? `↑ ${power(top.discharge)}` : power(0);
+  const batt = charging ? power(top.charge) : discharging ? power(top.discharge) : power(0);
+  const battArrow = charging ? mdiArrowDown : discharging ? mdiArrowUp : undefined;
   const battColor = charging ? ENERGY.batteryIn : ENERGY.batteryOut;
   const gridColor = top.gridOut > top.gridIn ? ENERGY.gridOut : ENERGY.gridIn;
   const gradients = l.bands.map((band) => svg`<linearGradient id=${`g-${band.id}`} x1="0" y1="0" x2="0" y2="1">
@@ -158,15 +180,15 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
     <rect x=${home.x} y=${home.y} width=${home.w} height=${home.h} rx="3" fill=${COLORS.home}></rect>
     ${bars}
     ${ball("grid", gridColor, mdiTransmissionTower, gridColor, [
-      { t: `→ ${power(top.gridIn)}`, cls: "in", style: `fill: ${ENERGY.gridIn}` },
-      { t: `← ${power(top.gridOut)}`, cls: "out", style: `fill: ${ENERGY.gridOut}` }], x.entities.grid, x.names.grid)}
+      { t: power(top.gridIn), cls: "in", style: `fill: ${ENERGY.gridIn}`, arrow: mdiArrowRight, arrowId: "in" },
+      { t: power(top.gridOut), cls: "out", style: `fill: ${ENERGY.gridOut}`, arrow: mdiArrowLeft, arrowId: "out" }], x.entities.grid, x.names.grid)}
     ${top.lowCarbon !== null ? ball("eco", ENERGY.nonFossil, mdiLeaf, ENERGY.nonFossil, [{ t: power(flows.gridNonFossil) }], x.entities.eco) : nothing}
-    ${ball("battery", battColor, batteryIcon(top.soc), battColor, [
-      { t: top.soc !== null ? `${Math.round(top.soc)} %` : "—", cls: "soc", style: `fill: ${battColor}` },
-      { t: batt, cls: "flow-val", style: `fill: ${battColor}` }], x.entities.battery, x.names.battery, true)}
-    ${ball("solar", ENERGY.solar, mdiSolarPower, ENERGY.solar, [...(x.solarSecondary ? [{ t: x.solarSecondary, cls: "sec" }] : []), { t: power(top.solar) }],
+    ${ball("battery", battColor, batteryIcon(top.soc, charging), battColor, [
+      { t: top.soc !== null ? `${Math.round(top.soc)} %` : "—", cls: "val soc", style: `fill: ${battColor}`, top: true },
+      { t: batt, cls: "flow-val", style: `fill: ${battColor}`, arrow: battArrow }], x.entities.battery, x.names.battery, true)}
+    ${ball("solar", ENERGY.solar, mdiSolarPower, ENERGY.solar, [...(x.solarSecondary ? [{ t: x.solarSecondary, top: true }] : []), { t: power(top.solar) }],
       x.entities.solar, x.names.solar, true)}
-    ${ball("home", homeRing, mdiHome, "var(--primary-text-color)", [...(x.homeSecondary ? [{ t: x.homeSecondary, cls: "sec" }] : []), { t: power(tree.watts) }],
+    ${ball("home", homeRing, mdiHome, "var(--primary-text-color)", [...(x.homeSecondary ? [{ t: x.homeSecondary, top: true }] : []), { t: power(tree.watts) }],
       x.entities.home)}
   </svg>`;
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0 · 2026-10-17
+
+- Batería: el porcentaje encima del icono, e icono por niveles de 10 % (con rayo mientras carga).
+- Flechas dentro de las bolitas con los iconos de MDI (como power-flow-card-plus) en vez de caracteres.
+
 ## 0.3.0 · 2026-10-17
 
 - Las bolitas miden siempre 80 px, como power-flow-card-plus: en pantallas anchas ya no crecen y el espacio lo aprovecha el Sankey.

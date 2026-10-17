@@ -6,6 +6,7 @@ import { layoutCard } from "../src/layout";
 import { buildTree } from "../src/model";
 import type { CardConfig } from "../src/types";
 import { CONFIG, EXAMPLE, fakeHass } from "./fixtures";
+import { mdiArrowDown, mdiArrowLeft, mdiArrowRight, mdiArrowUp, mdiBattery50, mdiBatteryCharging90 } from "@mdi/js";
 
 type El = HTMLElement & { setConfig(c: unknown): void; hass: unknown; updateComplete: Promise<boolean> };
 
@@ -64,8 +65,12 @@ describe("tarjeta", () => {
 
   it("las bolitas enseñan red, batería, solar, casa y eco", async () => {
     const { $ } = await mount();
-    expect(text($('[data-ball="grid"]'))).toContain("→ 0 W");
-    expect(text($('[data-ball="grid"]'))).toContain("← 54 W");
+    expect(text($('[data-ball="grid"] .in'))).toBe("0 W");
+    expect(text($('[data-ball="grid"] .out'))).toBe("54 W");
+    // las flechas son los iconos de MDI de power-flow-card-plus, no caracteres
+    expect(text($('[data-ball="grid"]'))).not.toMatch(/[→←↑↓]/);
+    expect($('[data-ball="grid"] [data-arrow="in"] path')!.getAttribute("d")).toBe(mdiArrowRight);
+    expect($('[data-ball="grid"] [data-arrow="out"] path')!.getAttribute("d")).toBe(mdiArrowLeft);
     // entrada y salida de la red, cada una con su color de energía de HA
     expect($('[data-ball="grid"] .in')!.getAttribute("style")).toContain("--energy-grid-consumption-color");
     expect($('[data-ball="grid"] .out')!.getAttribute("style")).toContain("--energy-grid-return-color");
@@ -103,6 +108,19 @@ describe("tarjeta", () => {
     const { $: $2 } = await mount(CONFIG, { ...EXAMPLE, "sensor.bateria_carga": "0", "sensor.bateria_descarga": "800" });
     for (const sel of ['[data-ball="battery"] circle', '[data-ball="battery"] .soc', '[data-ball="battery"] .flow-val'])
       expect($2(sel)!.getAttribute("style")).toContain("--energy-battery-out-color");
+  });
+
+  it("batería: el porcentaje encima del icono, icono por niveles de carga y flecha según cargue o descargue", async () => {
+    const { $ } = await mount();   // 95 % y cargando
+    const soc = $('[data-ball="battery"] .soc')!, icon = $('[data-ball="battery"] .icon')!;
+    expect(text(soc)).toBe("95 %");
+    expect(Number(soc.getAttribute("y"))).toBeLessThan(Number(icon.getAttribute("y")));
+    expect(icon.querySelector("path")!.getAttribute("d")).toBe(mdiBatteryCharging90);
+    expect($('[data-ball="battery"] [data-arrow] path')!.getAttribute("d")).toBe(mdiArrowDown);
+    const { $: $2 } = await mount(CONFIG, { ...EXAMPLE, "sensor.bateria_carga": "0", "sensor.bateria_descarga": "800",
+      "sensor.victron_mqtt_system_0_system_dc_battery_soc": ["54", "%"] });
+    expect($2('[data-ball="battery"] .icon path')!.getAttribute("d")).toBe(mdiBattery50);
+    expect($2('[data-ball="battery"] [data-arrow] path')!.getAttribute("d")).toBe(mdiArrowUp);
   });
 
   it("la temperatura va dentro de la bolita, no pegada al borde", async () => {

@@ -9,7 +9,7 @@ import type { CardConfig } from "./types";
 import "./editor";
 
 export const CARD_TAG = "energy-flow-tree-card";
-export const CARD_VERSION = "0.3.0";
+export const CARD_VERSION = "0.4.0";
 
 function secondary(hass: Hass, entity?: string): string | null {
   const s = entity ? hass.states[entity] : undefined;
