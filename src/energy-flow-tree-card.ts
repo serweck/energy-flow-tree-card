@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from "lit";
 import { handleAction, type HomeAssistant } from "custom-card-helpers";
-import { flowSettings, validateConfig } from "./config";
+import { flowSettings, isComplete, validateConfig } from "./config";
 import { layoutCard } from "./layout";
 import { buildTree, readKwh, topFlows, topValues, type Hass } from "./model";
 import { kwh, renderSvg } from "./render";
@@ -49,6 +49,7 @@ export class EnergyFlowTreeCard extends LitElement {
   protected render() {
     const c = this._config;
     if (!c || !this.hass) return nothing;
+    if (!isComplete(c)) return html`<ha-card><div class="hint">Elige en el editor las entidades de red, batería, solar y casa.</div></ha-card>`;
     const hass = this.hass as unknown as Hass;
     const tree = buildTree(c, hass);
     const top = topValues(c, hass);

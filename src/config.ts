@@ -15,20 +15,28 @@ function validateNodes(nodes: unknown, path: string): void {
   if (!Array.isArray(nodes)) throw new Error(`${path}: tiene que ser una lista`);
   nodes.forEach((n: Partial<NodeConfig> | undefined, i) => {
     const here = `${path}[${i}]`;
-    if (!n?.entity) throw new Error(`${here}.entity es obligatorio`);
+    // vacía vale (consumo recién añadido en el editor, se ignora al dibujar); lo que no vale es que falte
+    if (typeof n?.entity !== "string") throw new Error(`${here}.entity es obligatorio`);
     if (n.children !== undefined) validateNodes(n.children, `${here}.children`);
   });
 }
 
 export function validateConfig(config: Partial<CardConfig> | undefined): CardConfig {
   const c = config ?? {};
-  if (!c.grid?.import || !c.grid?.export) throw new Error("grid.import y grid.export son obligatorios");
-  if (!c.battery?.discharge || !c.battery?.charge || !c.battery?.soc)
+  // Las entidades pueden venir vacías (las rellena el editor): la tarjeta lo dice con un aviso, sin error.
+  const str = (v: unknown) => typeof v === "string";
+  if (!str(c.grid?.import) || !str(c.grid?.export)) throw new Error("grid.import y grid.export son obligatorios");
+  if (!str(c.battery?.discharge) || !str(c.battery?.charge) || !str(c.battery?.soc))
     throw new Error("battery.discharge, battery.charge y battery.soc son obligatorios");
-  if (!c.solar?.entity) throw new Error("solar.entity es obligatorio");
-  if (!c.home?.entity) throw new Error("home.entity es obligatorio");
+  if (!str(c.solar?.entity)) throw new Error("solar.entity es obligatorio");
+  if (!str(c.home?.entity)) throw new Error("home.entity es obligatorio");
   validateNodes(c.tree, "tree");
   return c as CardConfig;
+}
+
+/** Si ya están todas las entidades que hacen falta para dibujar. */
+export function isComplete(c: CardConfig): boolean {
+  return [c.grid.import, c.grid.export, c.battery.discharge, c.battery.charge, c.battery.soc, c.solar.entity, c.home.entity].every(Boolean);
 }
 
 export function flowSettings(c: CardConfig): FlowSettings {

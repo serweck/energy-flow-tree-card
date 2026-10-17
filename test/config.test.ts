@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { flowSettings, validateConfig } from "../src/config";
+import { flowSettings, isComplete, validateConfig } from "../src/config";
 import { CONFIG } from "./fixtures";
 
 describe("validateConfig", () => {
@@ -7,14 +7,22 @@ describe("validateConfig", () => {
 
   it.each([
     [{ ...CONFIG, grid: undefined }, "grid.import y grid.export son obligatorios"],
-    [{ ...CONFIG, battery: { discharge: "sensor.a", charge: "", soc: "sensor.b" } }, "battery.discharge, battery.charge y battery.soc son obligatorios"],
+    [{ ...CONFIG, battery: { discharge: "sensor.a", soc: "sensor.b" } }, "battery.discharge, battery.charge y battery.soc son obligatorios"],
     [{ ...CONFIG, solar: {} }, "solar.entity es obligatorio"],
-    [{ ...CONFIG, home: { entity: "" } }, "home.entity es obligatorio"],
+    [{ ...CONFIG, home: {} }, "home.entity es obligatorio"],
     [{ ...CONFIG, tree: "x" }, "tree: tiene que ser una lista"],
     [{ ...CONFIG, tree: [{ name: "Sin entidad" }] }, "tree[0].entity es obligatorio"],
     [{ ...CONFIG, tree: [{ entity: "sensor.a", children: [{}] }] }, "tree[0].children[0].entity es obligatorio"],
     [{ ...CONFIG, tree: [{ entity: "sensor.a", children: "x" }] }, "tree[0].children: tiene que ser una lista"],
   ])("rechaza configuraciones incompletas (%#)", (c, msg) => expect(() => validateConfig(c as never)).toThrow(msg));
+
+  it("acepta entidades vacías (las rellena el editor) y las marca como incompletas", () => {
+    const stub = { type: "custom:energy-flow-tree-card", grid: { import: "", export: "" }, battery: { discharge: "", charge: "", soc: "" },
+      solar: { entity: "" }, home: { entity: "" }, tree: [{ entity: "" }] };
+    expect(() => validateConfig(stub)).not.toThrow();
+    expect(isComplete(validateConfig(stub))).toBe(false);
+    expect(isComplete(CONFIG)).toBe(true);
+  });
 
   it("rechaza que no haya configuración", () => expect(() => validateConfig(undefined)).toThrow("grid.import y grid.export son obligatorios"));
 });

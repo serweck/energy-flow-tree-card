@@ -105,6 +105,17 @@ describe("tarjeta", () => {
     expect(text($('[data-label="0.0"]'))).toBe("ACS —");
   });
 
+  it("con la configuración inicial del selector de tarjetas enseña un aviso en vez de un error", async () => {
+    const card = document.createElement("energy-flow-tree-card") as El;
+    const stub = (customElements.get("energy-flow-tree-card") as unknown as { getStubConfig(): CardConfig }).getStubConfig();
+    expect(() => card.setConfig({ type: "custom:energy-flow-tree-card", ...stub })).not.toThrow();
+    card.hass = fakeHass(EXAMPLE);
+    document.body.appendChild(card);
+    await card.updateComplete;
+    expect(text(card.shadowRoot!.querySelector(".hint"))).toBe("Elige en el editor las entidades de red, batería, solar y casa.");
+    expect(card.shadowRoot!.querySelector("svg")).toBeNull();
+  });
+
   it("setConfig con árbol mal formado lanza el error de validateConfig", () => {
     const card = document.createElement("energy-flow-tree-card") as El;
     expect(() => card.setConfig({ ...CONFIG, tree: [{ name: "x" }] })).toThrow("tree[0].entity es obligatorio");

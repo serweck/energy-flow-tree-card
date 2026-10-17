@@ -57,6 +57,16 @@ describe("buildTree", () => {
   });
 });
 
+describe("consumos sin entidad", () => {
+  it("un consumo con entidad vacía (recién añadido en el editor) se ignora", () => {
+    const c: CardConfig = { ...CONFIG, tree: [...CONFIG.tree, { entity: "" }], };
+    c.tree[0] = { ...c.tree[0], children: [...c.tree[0].children!, { entity: "" }] };
+    const t = buildTree(c, fakeHass(EXAMPLE));
+    expect(t.children.map((n) => n.name)).toEqual(["Subcuadro", "Aerotermia", "Cocina", "Despacho", "Domótica", "Otros"]);
+    expect(t.children[0].children).toHaveLength(6);
+  });
+});
+
 describe("unidades", () => {
   it("convierte kW a W y Wh a kWh", () => {
     expect(readWatts(fakeHass({ "sensor.x": ["1.2", "kW"] }), "sensor.x")).toBe(1200);

@@ -113,6 +113,18 @@ describe("layoutCard", () => {
     }
   });
 
+  it("los nombres largos de barras vecinas no se pisan", () => {
+    const c: CardConfig = { ...CONFIG, tree: ["Lavavajillas", "Frigorífico cocina", "Termo eléctrico", "Placa de inducción", "Horno"].map((name, i) => ({ entity: `sensor.x${i}`, name })) };
+    const l = layoutCard(buildTree(c, fakeHass({ ...EXAMPLE, ...Object.fromEntries([0, 1, 2, 3, 4].map((i) => [`sensor.x${i}`, "50"])) })));
+    const row = l.bars.filter((b) => b.depth === 1).sort((a, b) => a.x - b.x);
+    const names = ["Lavavajillas", "Frigorífico cocina", "Termo eléctrico", "Placa de inducción", "Horno", "Otros"];
+    // ~5,3 px por carácter a 9,5 px de letra: la mitad de cada texto más la del vecino, con 4 px de aire.
+    for (let i = 1; i < row.length; i++) {
+      const gap = row[i].x + row[i].w / 2 - (row[i - 1].x + row[i - 1].w / 2);
+      expect(gap).toBeGreaterThanOrEqual((names[i - 1].length + names[i].length) * 5.3 / 2 + 4 - 1e-9);
+    }
+  });
+
   it("si una fila no cabe, el SVG se ensancha y las bolitas se centran", () => {
     const many: CardConfig = { ...CONFIG, tree: Array.from({ length: 9 }, () => ({ entity: "sensor.jacuzzi_power" })) };
     const l = layoutCard(buildTree(many, fakeHass(EXAMPLE)));

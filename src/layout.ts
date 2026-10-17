@@ -75,18 +75,25 @@ function rows(tree: TreeValue): Item[][] {
   return out;
 }
 
-/** Separación que necesitan dos barras vecinas: textos sin pisarse y bordes separados. */
-const need = (a: number, b: number) => Math.max(MIN_GAP, (a + b) / 2 + 6);
+/** Ancho aproximado del texto bajo una barra (nombre o valor, el más largo) con letra de 9,5 px. */
+const CHAR_W = 5.3;
+const labelW = (name: string) => Math.max(name.length, 7) * CHAR_W;
 
-/** Margen de un extremo de la fila: el general o, si la barra es más ancha, lo que haga falta para que no se salga. */
-const pad = (w: number) => Math.max(MARGIN, w / 2 + 4);
+/** Una barra de la fila a efectos de colocación: ancho de su corriente y de su texto. */
+interface Slot { w: number; l: number }
+
+/** Separación que necesitan dos barras vecinas: textos sin pisarse y bordes separados. */
+const need = (a: Slot, b: Slot) => Math.max(MIN_GAP, (a.w + b.w) / 2 + 6, (a.l + b.l) / 2 + 4);
+
+/** Margen de un extremo de la fila: el general o lo que haga falta para que ni la barra ni su texto se salgan. */
+const pad = (a: Slot) => Math.max(MARGIN, a.w / 2 + 4, a.l / 2 + 2);
 
 /** Centros de una fila: cada par separado lo que necesita, más un extra repartido (hasta 38 px), con el grupo centrado entre los márgenes. */
-function centers(widths: number[], width: number): number[] {
-  const n = widths.length;
+function centers(slots: Slot[], width: number): number[] {
+  const n = slots.length;
   if (n === 1) return [width / 2];
-  const left = pad(widths[0]), right = pad(widths[n - 1]);
-  const gaps = widths.slice(1).map((w, i) => need(widths[i], w));
+  const left = pad(slots[0]), right = pad(slots[n - 1]);
+  const gaps = slots.slice(1).map((sl, i) => need(slots[i], sl));
   const slack = width - left - right - gaps.reduce((a, g) => a + g, 0);
   const extra = Math.max(0, Math.min(slack / (n - 1), MAX_GAP - MIN_GAP));
   const out = [0];
@@ -125,8 +132,9 @@ export function layoutCard(tree: TreeValue, width = BASE): Layout {
   });
 
   // Ancho del dibujo: el que pida la fila más apretada.
-  const span = (ws: number[]) => ws.slice(1).reduce((a, w, i) => a + need(ws[i], w), 0);
-  const W = Math.max(width, ...rowWidths.map((ws) => pad(ws[0]) + pad(ws[ws.length - 1]) + span(ws)));
+  const rowSlots = all.map((row, r) => row.map((i, k): Slot => ({ w: rowWidths[r][k], l: labelW(i.node.name) })));
+  const span = (sl: Slot[]) => sl.slice(1).reduce((a, x, i) => a + need(sl[i], x), 0);
+  const W = Math.max(width, ...rowSlots.map((sl) => pad(sl[0]) + pad(sl[sl.length - 1]) + span(sl)));
   const dx = (W - BASE) / 2;
   const { balls, topLines } = topBlock(dx);
 
@@ -142,7 +150,7 @@ export function layoutCard(tree: TreeValue, width = BASE): Layout {
   all.forEach((row, r) => {
     destY = originY + ROW_DROP;
     const widths = rowWidths[r];
-    const xs = centers(widths, W);
+    const xs = centers(rowSlots[r], W);
     const byParent = new Map<string, number[]>();
     row.forEach((i, k) => byParent.set(i.parent, [...(byParent.get(i.parent) ?? []), k]));
     for (const [parent, ks] of byParent) {

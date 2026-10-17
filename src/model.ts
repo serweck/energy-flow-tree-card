@@ -47,7 +47,7 @@ function nodeValue(hass: Hass, n: NodeConfig, id: string): TreeValue {
     color: n.color,
     watts: readWatts(hass, n.entity),
     kind: "load",
-    children: (n.children ?? []).map((c, i) => nodeValue(hass, c, `${id}.${i}`)),
+    children: (n.children ?? []).flatMap((c, i) => (c.entity ? [nodeValue(hass, c, `${id}.${i}`)] : [])),
   };
   if (value.children.length) {
     value.children.push({
@@ -60,7 +60,8 @@ function nodeValue(hass: Hass, n: NodeConfig, id: string): TreeValue {
 
 /** El árbol con sus vatios: raíz = casa; Otros al final del nivel 1 y un resto en cada padre con hijos. */
 export function buildTree(c: CardConfig, hass: Hass): TreeValue {
-  const children = c.tree.map((n, i) => nodeValue(hass, n, String(i)));
+  // los consumos sin entidad (recién añadidos en el editor) no se dibujan
+  const children = c.tree.flatMap((n, i) => (n.entity ? [nodeValue(hass, n, String(i))] : []));
   const watts = readWatts(hass, c.home.entity);
   children.push({ id: "others", name: "Otros", kind: "others", children: [], watts: Math.max(0, (watts ?? 0) - sum(children)) });
   return { id: "home", name: "Casa", entity: c.home.entity, kind: "home", watts, children };
