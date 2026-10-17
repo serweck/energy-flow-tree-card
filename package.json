@@ -1,0 +1,40 @@
+{
+  "name": "energy-flow-tree-card",
+  "version": "0.1.0",
+  "description": "Tarjeta Lovelace con el flujo solar (red, batería, solar, casa) y un Sankey de consumos anidados para Home Assistant",
+  "type": "module",
+  "main": "dist/energy-flow-tree-card.js",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "preview": "http-server . -p 8772 -c-1 --cors"
+  },
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "custom-card",
+    "solar",
+    "energy",
+    "sankey"
+  ],
+  "author": "Serweck",
+  "license": "MIT",
+  "dependencies": {
+    "custom-card-helpers": "^1.9.0",
+    "lit": "^3.1.2"
+  },
+  "devDependencies": {
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "http-server": "^14.1.1",
+    "jsdom": "^25.0.1",
+    "rollup": "^4.13.0",
+    "tslib": "^2.6.2",
+    "typescript": "^5.4.5",
+    "vitest": "^2.1.0"
+  }
+}
