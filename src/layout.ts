@@ -78,16 +78,20 @@ function rows(tree: TreeValue): Item[][] {
 /** Separación que necesitan dos barras vecinas: textos sin pisarse y bordes separados. */
 const need = (a: number, b: number) => Math.max(MIN_GAP, (a + b) / 2 + 6);
 
-/** Centros de una fila: cada par separado lo que necesita, más un extra repartido (hasta 30 px), con el grupo centrado. */
+/** Margen de un extremo de la fila: el general o, si la barra es más ancha, lo que haga falta para que no se salga. */
+const pad = (w: number) => Math.max(MARGIN, w / 2 + 4);
+
+/** Centros de una fila: cada par separado lo que necesita, más un extra repartido (hasta 38 px), con el grupo centrado entre los márgenes. */
 function centers(widths: number[], width: number): number[] {
   const n = widths.length;
   if (n === 1) return [width / 2];
+  const left = pad(widths[0]), right = pad(widths[n - 1]);
   const gaps = widths.slice(1).map((w, i) => need(widths[i], w));
-  const slack = width - 2 * MARGIN - gaps.reduce((a, g) => a + g, 0);
+  const slack = width - left - right - gaps.reduce((a, g) => a + g, 0);
   const extra = Math.max(0, Math.min(slack / (n - 1), MAX_GAP - MIN_GAP));
   const out = [0];
   gaps.forEach((g) => out.push(out[out.length - 1] + g + extra));
-  const shift = width / 2 - out[n - 1] / 2;
+  const shift = left + (width - left - right) / 2 - out[n - 1] / 2;
   return out.map((x) => x + shift);
 }
 
@@ -122,7 +126,7 @@ export function layoutCard(tree: TreeValue, width = BASE): Layout {
 
   // Ancho del dibujo: el que pida la fila más apretada.
   const span = (ws: number[]) => ws.slice(1).reduce((a, w, i) => a + need(ws[i], w), 0);
-  const W = Math.max(width, ...rowWidths.map((ws) => 2 * MARGIN + span(ws)));
+  const W = Math.max(width, ...rowWidths.map((ws) => pad(ws[0]) + pad(ws[ws.length - 1]) + span(ws)));
   const dx = (W - BASE) / 2;
   const { balls, topLines } = topBlock(dx);
 

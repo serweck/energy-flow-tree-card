@@ -131,6 +131,15 @@ describe("layoutCard", () => {
     expect(l.links.length).toBe(3);  // Subcuadro, ACS y Despacho bajan a su fila
   });
 
+  it("ninguna barra se sale del dibujo, aunque sea muy ancha", () => {
+    const big = buildTree(CONFIG, fakeHass({ ...EXAMPLE, "sensor.subcuadro_potencia": "1700", "sensor.calentador_agua_power": "1500" }));
+    for (const l of [L, layoutCard(big)])
+      for (const b of l.bars) {
+        expect(b.x).toBeGreaterThanOrEqual(4 - 1e-9);
+        expect(b.x + b.w).toBeLessThanOrEqual(l.width - 4 + 1e-9);
+      }
+  });
+
   it("con la casa a 0 W no divide por cero", () => {
     const zeros = Object.fromEntries(Object.entries(EXAMPLE).map(([k, v]) => [k, Array.isArray(v) ? v : "0"])) as typeof EXAMPLE;
     const l = layoutCard(buildTree(CONFIG, fakeHass(zeros)));
