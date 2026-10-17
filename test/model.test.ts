@@ -101,13 +101,16 @@ describe("topValues", () => {
 describe("topFlows", () => {
   it("reparte la solar entre red, batería y casa", () =>
     expect(topFlows({ solar: 3200, gridIn: 0, gridOut: 54, charge: 1100, discharge: 0, soc: 95, lowCarbon: 82 })).toEqual({
-      solarToGrid: 54, solarToBattery: 1100, solarToHome: 2046, gridToBattery: 0, batteryToGrid: 0, gridToHome: 0, batteryToHome: 0,
+      solarToGrid: 54, solarToBattery: 1100, solarToHome: 2046, gridToBattery: 0, batteryToGrid: 0, gridToHome: 0, batteryToHome: 0, gridNonFossil: 0,
     }));
 
   it("de noche: batería y red alimentan la casa", () =>
     expect(topFlows({ solar: 0, gridIn: 200, gridOut: 0, charge: 0, discharge: 800, soc: 60, lowCarbon: null })).toEqual({
-      solarToGrid: 0, solarToBattery: 0, solarToHome: 0, gridToBattery: 0, batteryToGrid: 0, gridToHome: 200, batteryToHome: 800,
+      solarToGrid: 0, solarToBattery: 0, solarToHome: 0, gridToBattery: 0, batteryToGrid: 0, gridToHome: 200, batteryToHome: 800, gridNonFossil: 0,
     }));
+
+  it("bajas emisiones: la parte limpia de lo que entra de la red (100 − % fósil), como power-flow-card-plus", () =>
+    expect(topFlows({ solar: 0, gridIn: 1000, gridOut: 0, charge: 0, discharge: 0, soc: 60, lowCarbon: 82 }).gridNonFossil).toBe(820));
 
   it("la red carga la batería si no llega la solar", () =>
     expect(topFlows({ solar: 300, gridIn: 1000, gridOut: 0, charge: 900, discharge: 0, soc: 20, lowCarbon: null })).toMatchObject({

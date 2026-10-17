@@ -10,12 +10,12 @@ export interface NodeConfig {
 export interface CardConfig {
   type: string;
   title?: string;
-  grid: { import: string; export: string };
-  battery: { discharge: string; charge: string; soc: string };
-  solar: { entity: string; secondary?: string };
+  grid: { import: string; export: string; name?: string };
+  battery: { discharge: string; charge: string; soc: string; name?: string };
+  solar: { entity: string; secondary?: string; name?: string };
   home: { entity: string; secondary?: string };
   /** Porcentaje de combustibles fósiles de la red; la tarjeta enseña 100 − este valor. */
-  eco?: { fossil: string };
+  eco?: { fossil: string; name?: string };
   produced_today?: string;
   forecast?: { today: string; tomorrow: string };
   /** Por defecto true. */

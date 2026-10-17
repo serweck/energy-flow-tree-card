@@ -66,19 +66,52 @@ describe("tarjeta", () => {
     const { $ } = await mount();
     expect(text($('[data-ball="grid"]'))).toContain("→ 0 W");
     expect(text($('[data-ball="grid"]'))).toContain("← 54 W");
+    // entrada y salida de la red, cada una con su color de energía de HA
+    expect($('[data-ball="grid"] .in')!.getAttribute("style")).toContain("--energy-grid-consumption-color");
+    expect($('[data-ball="grid"] .out')!.getAttribute("style")).toContain("--energy-grid-return-color");
+    // exporta más de lo que importa: el círculo va en el color de la salida
+    expect($('[data-ball="grid"] circle')!.getAttribute("style")).toContain("--energy-grid-return-color");
     expect(text($('[data-ball="battery"]'))).toContain("95 %");
     expect(text($('[data-ball="battery"]'))).toContain("1,1 kW");
     expect(text($('[data-ball="solar"]'))).toContain("3,2 kW");
     expect(text($('[data-ball="solar"]'))).toContain("19,4 °C");
     expect(text($('[data-ball="home"]'))).toContain("1,9 kW");
-    expect(text($('[data-ball="eco"]'))).toContain("82 %");
+    expect(text($('[data-ball="eco"]'))).toContain("0 W");
+  });
+
+  it("bajas emisiones enseña los vatios limpios que entran de la red y su línea va a esa velocidad", async () => {
+    const { $ } = await mount(CONFIG, { ...EXAMPLE, "sensor.grid_importacion": "1000", "sensor.victron_mqtt_system_0_system_dc_pv_power": "0" });
+    expect(text($('[data-ball="eco"]'))).toContain("820 W");
+    expect($('[data-line="gridNonFossil"] circle')!.firstElementChild!.getAttribute("dur")).toBe(`${flowDuration(820, S).toFixed(2)}s`);
+  });
+
+  it("cada bolita lleva su icono de antes y su nombre fuera", async () => {
+    const { $ } = await mount();
+    for (const id of ["grid", "eco", "battery", "solar", "home"]) expect($(`[data-ball="${id}"] .icon path`)).not.toBeNull();
+    expect(text($('[data-ball="grid"] .name'))).toBe("Red");
+    expect(text($('[data-ball="solar"] .name'))).toBe("Solar");
+    expect(text($('[data-ball="battery"] .name'))).toBe("Batería");
+    expect(text($('[data-ball="eco"] .name'))).toBe("Bajas emisiones");
+    const { $: $2 } = await mount({ ...CONFIG, grid: { ...CONFIG.grid, name: "Grid" } });
+    expect(text($2('[data-ball="grid"] .name'))).toBe("Grid");
+  });
+
+  it("el anillo de la casa se reparte por origen: solar, batería, red limpia y red fósil", async () => {
+    const { $ } = await mount(CONFIG, { ...EXAMPLE, "sensor.victron_mqtt_system_0_system_dc_pv_power": "1000", "sensor.bateria_carga": "0",
+      "sensor.bateria_descarga": "500", "sensor.grid_importacion": "500", "sensor.grid_exportacion": "0" });
+    const seg = (k: string) => Number($(`[data-ball="home"] [data-seg="${k}"]`)!.getAttribute("stroke-dasharray")!.split(" ")[0]);
+    const C = 2 * Math.PI * 40;
+    expect(seg("solar")).toBeCloseTo(C * 1000 / 2000, 1);
+    expect(seg("battery")).toBeCloseTo(C * 500 / 2000, 1);
+    expect(seg("nonfossil")).toBeCloseTo(C * 410 / 2000, 1);
+    expect(seg("fossil")).toBeCloseTo(C * 90 / 2000, 1);
   });
 
   it("título con lo producido hoy y pronóstico al pie", async () => {
     const { $ } = await mount();
     expect(text($(".title"))).toBe("Solar");
     expect(text($(".produced"))).toBe("Producido hoy 18,4 kWh");
-    expect(text($(".forecast"))).toBe("Pronóstico hoy 42,0 kWh Mañana 20,5 kWh");
+    expect(text($(".forecast"))).toBe("Producción estimada hoy 42,0 kWh Mañana 20,5 kWh");
   });
 
   it("show_forecast: false oculta el pronóstico", async () => {

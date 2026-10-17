@@ -5,11 +5,15 @@ export interface Ball { id: "grid" | "eco" | "battery" | "solar" | "home"; cx: n
 export interface Bar { id: string; x: number; y: number; w: number; h: number; depth: number; zero: boolean; split?: boolean }
 /** d: área cerrada de la corriente; center: curva por su centro, para el brillo. */
 export interface Band { id: string; parent: string; d: string; center: string; watts: number | null; zero: boolean }
+export type TopLine = Exclude<keyof TopFlows, "gridNonFossil">;
+
 export interface Layout {
   width: number;
   height: number;
   balls: Record<Ball["id"], Ball>;
-  topLines: Record<keyof TopFlows, string>;
+  topLines: Record<TopLine, string>;
+  /** Línea de bajas emisiones a la red. */
+  ecoLine: string;
   bars: Bar[];
   bands: Band[];
   links: string[];
@@ -22,7 +26,7 @@ const MARGIN = 30;
 const MIN_GAP = 52;
 const MAX_GAP = 90;
 const HOME_FRAC = 0.6;
-const HOME_BAR = { y: 210, h: 6 };
+const HOME_BAR = { y: 310, h: 6 };
 const ROW_DROP = 96;
 const BAR_H = 8;
 const TEXT_H = 36;
@@ -43,20 +47,22 @@ function centerPath(sx0: number, sx1: number, y0: number, tx0: number, tx1: numb
   return `M${f(a)},${f(y0)} C${f(a)},${f(m)} ${f(b)},${f(m)} ${f(b)},${f(y1)}`;
 }
 
-function topBlock(dx: number): { balls: Layout["balls"]; topLines: Layout["topLines"] } {
+/** Bolitas de 80 px (r 40) como power-flow-card-plus: red arriba con bajas emisiones a su derecha, batería y solar abajo y la casa en medio. */
+function topBlock(dx: number): { balls: Layout["balls"]; topLines: Layout["topLines"]; ecoLine: string } {
   const b = (id: Ball["id"], cx: number, cy: number, r: number): Ball => ({ id, cx: cx + dx, cy, r });
   const p = (s: string) => s.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${f(Number(x) + dx)} ${y}`);
   return {
-    balls: { grid: b("grid", 200, 36, 28), eco: b("eco", 290, 30, 20), battery: b("battery", 72, 112, 28), solar: b("solar", 328, 112, 28), home: b("home", 200, 178, 32) },
+    balls: { grid: b("grid", 200, 64, 40), eco: b("eco", 330, 64, 40), battery: b("battery", 70, 176, 40), solar: b("solar", 330, 176, 40), home: b("home", 200, 250, 40) },
     topLines: {
-      solarToHome: p("M 300 112 L 250 112 Q 200 112 200 146"),
-      solarToBattery: p("M 300 104 Q 200 66 100 104"),
-      solarToGrid: p("M 314 87 Q 300 50 227 42"),
-      gridToHome: p("M 200 64 L 200 146"),
-      gridToBattery: p("M 173 42 Q 100 50 86 87"),
-      batteryToHome: p("M 100 112 L 150 112 Q 200 112 200 146"),
-      batteryToGrid: p("M 86 87 Q 100 50 173 42"),
+      solarToHome: p("M 290 176 L 240 176 Q 200 176 200 210"),
+      solarToBattery: p("M 296 155 Q 200 120 104 155"),
+      solarToGrid: p("M 312 140 C 300 112 270 84 238 76"),
+      gridToHome: p("M 200 104 L 200 210"),
+      gridToBattery: p("M 162 76 C 130 84 100 112 88 140"),
+      batteryToHome: p("M 110 176 L 160 176 Q 200 176 200 210"),
+      batteryToGrid: p("M 88 140 C 100 112 130 84 162 76"),
     },
+    ecoLine: p("M 290 64 L 240 64"),
   };
 }
 
@@ -136,7 +142,7 @@ export function layoutCard(tree: TreeValue, width = BASE): Layout {
   const span = (sl: Slot[]) => sl.slice(1).reduce((a, x, i) => a + need(sl[i], x), 0);
   const W = Math.max(width, ...rowSlots.map((sl) => pad(sl[0]) + pad(sl[sl.length - 1]) + span(sl)));
   const dx = (W - BASE) / 2;
-  const { balls, topLines } = topBlock(dx);
+  const { balls, topLines, ecoLine } = topBlock(dx);
 
   const homeBar: Bar = { id: "home", x: W / 2 - homeW / 2, y: HOME_BAR.y, w: homeW, h: HOME_BAR.h, depth: 0, zero: !(tree.watts && tree.watts > 0) };
   const bars: Bar[] = [homeBar];
@@ -184,5 +190,5 @@ export function layoutCard(tree: TreeValue, width = BASE): Layout {
   });
 
   const forecastY = destY + BAR_H + TEXT_H + 10;
-  return { width: W, height: forecastY + 60, balls, topLines, bars, bands, links, forecastY };
+  return { width: W, height: forecastY + 60, balls, topLines, ecoLine, bars, bands, links, forecastY };
 }

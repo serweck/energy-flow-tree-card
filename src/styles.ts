@@ -13,8 +13,11 @@ export const styles = css`
   .produced { font-size: 12.5px; color: var(--ef-mut); }
   svg.flow { display: block; width: 100%; height: auto; color: var(--primary-text-color); user-select: none; -webkit-user-select: none; }
   svg text { font-family: var(--paper-font-body1_-_font-family, Roboto, sans-serif); font-size: 10px; fill: currentColor; }
-  svg text.sec { fill: var(--ef-mut); font-size: 9px; }
-  svg text.val, svg tspan.val { font-weight: 700; }
+  svg text.sec { fill: var(--ef-mut); font-size: 11px; }
+  /* Dentro de las bolitas, 12 px como power-flow-card-plus; el nombre, fuera y en gris. */
+  svg text.val { font-size: 12px; }
+  svg tspan.val { font-weight: 700; }
+  svg text.name { fill: var(--ef-mut); font-size: 12px; }
   svg text.lbl { font-size: 9.5px; }
   svg .dim { opacity: 0.45; }
   svg .hit { cursor: pointer; }

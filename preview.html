@@ -46,7 +46,7 @@
       const charge = Math.max(0, Math.min(2000, pv - casa)), export_ = Math.max(0, pv - casa - charge);
       const dis = Math.max(0, casa - pv);
       return { states: {
-        "sensor.casa": st(casa), "sensor.pv": st(pv), "sensor.grid_importacion": st(0), "sensor.grid_exportacion": st(export_),
+        "sensor.casa": st(casa), "sensor.pv": st(pv), "sensor.grid_importacion": st(Math.max(0, r(-1500, 1500))), "sensor.grid_exportacion": st(export_),
         "sensor.bateria_carga": st(charge), "sensor.bateria_descarga": st(dis), "sensor.soc": st(r(40, 98), "%"),
         "sensor.fosil": st(18, "%"), "sensor.t_ext": st(19.4, "°C"), "sensor.t_int": st(24.2, "°C"),
         "sensor.pv_hoy": st(18.4, "kWh"), "sensor.prev_hoy": st(42.04, "kWh"), "sensor.prev_manana": st(20.52, "kWh"),

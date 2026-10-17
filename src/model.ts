@@ -99,6 +99,8 @@ export interface TopFlows {
   gridToBattery: number;
   batteryToHome: number;
   batteryToGrid: number;
+  /** Vatios de bajas emisiones que entran de la red: entrada × (100 − % fósil). */
+  gridNonFossil: number;
 }
 
 /** Reparto de la energía entre solar, red, batería y casa (la solar va primero a la red, luego a la batería y el resto a casa). */
@@ -110,5 +112,6 @@ export function topFlows(v: TopValues): TopFlows {
   const batteryToGrid = Math.max(0, v.gridOut - solarToGrid);
   const gridToHome = Math.max(0, v.gridIn - gridToBattery);
   const batteryToHome = Math.max(0, v.discharge - batteryToGrid);
-  return { solarToHome, solarToBattery, solarToGrid, gridToHome, gridToBattery, batteryToHome, batteryToGrid };
+  const gridNonFossil = v.lowCarbon === null ? 0 : (v.gridIn * Math.max(0, Math.min(100, v.lowCarbon))) / 100;
+  return { solarToHome, solarToBattery, solarToGrid, gridToHome, gridToBattery, batteryToHome, batteryToGrid, gridNonFossil };
 }

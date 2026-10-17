@@ -2,7 +2,7 @@
 
 Tarjeta Lovelace para Home Assistant que junta dos formas de ver la energía de casa:
 
-- **Arriba, las bolitas** al estilo de power-flow-card-plus: red (entrada y salida), eco (porcentaje de bajas emisiones), batería, solar y casa. Las líneas son continuas, con puntos que corren más rápido cuanta más potencia llevan y que se quedan casi transparentes cuando no hay flujo.
+- **Arriba, las bolitas** al estilo de power-flow-card-plus: red (entrada y salida, cada una con su color), bajas emisiones (los vatios limpios que entran de la red), batería, solar y casa, con el anillo de la casa repartido por origen. Las líneas son continuas, con puntos que corren más rápido cuanta más potencia llevan y que se quedan casi transparentes cuando no hay flujo.
 - **Debajo de la casa, un Sankey vertical** que reparte el consumo en todos los niveles que quieras: cada consumo puede tener sus propios consumos dentro (un subcuadro, un magnetotérmico de luces…). El grosor de cada corriente es su potencia, con un brillo que corre por dentro.
 - **Otros** = consumo de la casa − suma del primer nivel. Cada consumo con hijos tiene su **resto** = consumo − suma de sus hijos. Ninguno de los dos baja de 0.
 - **Pronóstico** de hoy y de mañana al pie (opcional) y lo producido hoy en el título.
@@ -18,7 +18,7 @@ Tarjeta Lovelace para Home Assistant que junta dos formas de ver la energía de 
 ```yaml
 type: custom:energy-flow-tree-card
 title: Solar
-grid: { import: sensor.red_entrada, export: sensor.red_salida }
+grid: { import: sensor.red_entrada, export: sensor.red_salida, name: Red }   # name opcional, también en battery, solar y eco
 battery: { discharge: sensor.bateria_descarga, charge: sensor.bateria_carga, soc: sensor.bateria_soc }
 solar: { entity: sensor.solar_potencia, secondary: sensor.temperatura_exterior }
 home: { entity: sensor.casa_consumo, secondary: sensor.temperatura_interior }

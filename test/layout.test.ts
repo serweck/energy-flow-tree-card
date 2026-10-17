@@ -33,16 +33,18 @@ function nested(): TreeValue {
 
 describe("layoutCard", () => {
   it("las bolitas están en las posiciones del diseño", () => {
-    expect(L.balls.grid).toMatchObject({ cx: 200, cy: 36, r: 28 });
-    expect(L.balls.eco).toMatchObject({ cx: 290, cy: 30, r: 20 });
-    expect(L.balls.battery).toMatchObject({ cx: 72, cy: 112, r: 28 });
-    expect(L.balls.solar).toMatchObject({ cx: 328, cy: 112, r: 28 });
-    expect(L.balls.home).toMatchObject({ cx: 200, cy: 178, r: 32 });
+    // Bolitas de 80 px como power-flow-card-plus: red arriba con bajas emisiones a su derecha, batería y solar abajo, casa en medio.
+    expect(L.balls.grid).toMatchObject({ cx: 200, cy: 64, r: 40 });
+    expect(L.balls.eco).toMatchObject({ cx: 330, cy: 64, r: 40 });
+    expect(L.balls.battery).toMatchObject({ cx: 70, cy: 176, r: 40 });
+    expect(L.balls.solar).toMatchObject({ cx: 330, cy: 176, r: 40 });
+    expect(L.balls.home).toMatchObject({ cx: 200, cy: 250, r: 40 });
+    expect(L.ecoLine).toBe("M 290.00 64 L 240.00 64");
     expect(Object.keys(L.topLines).sort()).toEqual(["batteryToGrid", "batteryToHome", "gridToBattery", "gridToHome", "solarToBattery", "solarToGrid", "solarToHome"]);
   });
 
-  it("la barra de la casa: 60 % del ancho, centrada, en y = 210..216", () =>
-    expect(bar(L, "home")).toMatchObject({ x: 80, y: 210, w: 240, depth: 0 }));
+  it("la barra de la casa: 60 % del ancho, centrada, bajo la bolita de la casa", () =>
+    expect(bar(L, "home")).toMatchObject({ x: 80, y: 310, w: 240, depth: 0 }));
 
   it("una banda por hijo y una barra por nodo", () => {
     const ids: string[] = [];
@@ -130,6 +132,7 @@ describe("layoutCard", () => {
     const l = layoutCard(buildTree(many, fakeHass(EXAMPLE)));
     expect(l.width).toBeGreaterThan(400);
     expect(l.balls.home.cx).toBeCloseTo(l.width / 2, 5);
+    expect(l.balls.eco.cx).toBeCloseTo(l.width / 2 + 130, 5);
   });
 
   it("anidado: cada profundidad es una fila, los hijos de cada padre seguidos y en orden", () => {

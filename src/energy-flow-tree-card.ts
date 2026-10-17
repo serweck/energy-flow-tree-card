@@ -9,7 +9,7 @@ import type { CardConfig } from "./types";
 import "./editor";
 
 export const CARD_TAG = "energy-flow-tree-card";
-export const CARD_VERSION = "0.1.0";
+export const CARD_VERSION = "0.2.0";
 
 function secondary(hass: Hass, entity?: string): string | null {
   const s = entity ? hass.states[entity] : undefined;
@@ -63,9 +63,10 @@ export class EnergyFlowTreeCard extends LitElement {
         solarSecondary: secondary(hass, c.solar.secondary),
         homeSecondary: secondary(hass, c.home.secondary),
         entities: { grid: c.grid.import, battery: c.battery.soc, solar: c.solar.entity, home: c.home.entity, eco: c.eco?.fossil },
+        names: { grid: c.grid.name ?? "Red", battery: c.battery.name ?? "Batería", solar: c.solar.name ?? "Solar", eco: c.eco?.name ?? "Bajas emisiones" },
       }, this._open)}
       ${showForecast ? html`<div class="forecast">
-        <div>Pronóstico hoy <b>${kwh(readKwh(hass, c.forecast!.today))}</b></div>
+        <div>Producción estimada hoy <b>${kwh(readKwh(hass, c.forecast!.today))}</b></div>
         <div>Mañana <b>${kwh(readKwh(hass, c.forecast!.tomorrow))}</b></div></div>` : nothing}
     </ha-card>`;
   }

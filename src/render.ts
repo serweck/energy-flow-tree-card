@@ -1,10 +1,20 @@
 import { svg, nothing, type TemplateResult } from "lit";
+import { mdiBattery, mdiBatteryHigh, mdiBatteryLow, mdiBatteryMedium, mdiBatteryOutline, mdiHome, mdiLeaf, mdiSolarPower, mdiTransmissionTower } from "@mdi/js";
 import { flowDuration, lineState } from "./flow";
-import type { Layout } from "./layout";
+import type { Layout, TopLine } from "./layout";
 import type { TopFlows, TopValues, TreeValue } from "./model";
 import type { FlowSettings } from "./types";
 
-export const COLORS = { grid: "#a280db", gridOut: "#c7a2ff", eco: "#0f9d58", battery: "#4db6ac", solar: "#ff9800", home: "#5c9ded", others: "#9e9e9e" };
+export const COLORS = { home: "#5c9ded", others: "#9e9e9e" };
+/** Los colores de energía de HA (los que usa power-flow-card-plus), con sus valores por defecto. */
+export const ENERGY = {
+  gridIn: "var(--energy-grid-consumption-color, #488fc2)",
+  gridOut: "var(--energy-grid-return-color, #8353d1)",
+  solar: "var(--energy-solar-color, #ff9800)",
+  batteryIn: "var(--energy-battery-in-color, #f06292)",
+  batteryOut: "var(--energy-battery-out-color, #4db6ac)",
+  nonFossil: "var(--energy-non-fossil-color, #0f9d58)",
+};
 /** Colores por defecto para los consumos que no fijan el suyo. */
 const PALETTE = ["#a1887f", "#e57373", "#ffb74d", "#9575cd", "#81c784", "#64b5f6", "#f06292", "#4dd0e1", "#ffd54f", "#aed581"];
 
@@ -19,14 +29,23 @@ export interface Extras {
   solarSecondary: string | null;
   homeSecondary: string | null;
   entities: { grid: string; battery: string; solar: string; home: string; eco?: string };
+  names: { grid: string; battery: string; solar: string; eco: string };
 }
 
 export type Click = (entity?: string) => (e: Event) => void;
 
 const LINE_COLOR: Record<keyof TopFlows, string> = {
-  solarToHome: COLORS.solar, solarToBattery: COLORS.solar, solarToGrid: COLORS.solar,
-  gridToHome: COLORS.grid, gridToBattery: COLORS.grid, batteryToHome: COLORS.battery, batteryToGrid: COLORS.battery,
+  solarToHome: ENERGY.solar, solarToBattery: ENERGY.batteryIn, solarToGrid: ENERGY.gridOut,
+  gridToHome: ENERGY.gridIn, gridToBattery: ENERGY.batteryIn, batteryToHome: ENERGY.batteryOut, batteryToGrid: ENERGY.gridOut,
+  gridNonFossil: ENERGY.nonFossil,
 };
+const R = 40;
+const CIRC = 2 * Math.PI * R;
+
+function batteryIcon(soc: number | null): string {
+  if (soc === null) return mdiBatteryOutline;
+  return soc >= 90 ? mdiBattery : soc >= 65 ? mdiBatteryHigh : soc >= 35 ? mdiBatteryMedium : soc >= 10 ? mdiBatteryLow : mdiBatteryOutline;
+}
 
 function colorsOf(tree: TreeValue): Map<string, string> {
   const out = new Map<string, string>([["home", COLORS.home]]);
@@ -51,24 +70,54 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
   const byId = nodes(tree);
   const b = l.balls;
 
-  const topLine = (key: keyof TopFlows) => {
-    const w = flows[key], st = lineState(w, s), d = l.topLines[key];
+  const topLine = (key: keyof TopFlows, d: string) => {
+    const w = flows[key], st = lineState(w, s), col = LINE_COLOR[key];
     return svg`<g data-line=${key}>
-      <path d=${d} fill="none" stroke=${LINE_COLOR[key]} stroke-width="2" opacity=${st.opacity}></path>
-      ${st.dots ? svg`<circle r="2.4" fill=${LINE_COLOR[key]}><animateMotion dur=${`${flowDuration(w, s).toFixed(2)}s`} repeatCount="indefinite" path=${d}></animateMotion></circle>` : nothing}
+      <path d=${d} fill="none" style=${`stroke: ${col}`} stroke-width="2" opacity=${st.opacity}></path>
+      ${st.dots ? svg`<circle r="2.6" style=${`fill: ${col}`}><animateMotion dur=${`${flowDuration(w, s).toFixed(2)}s`} repeatCount="indefinite" path=${d}></animateMotion></circle>` : nothing}
     </g>`;
   };
 
-  const ball = (id: keyof Layout["balls"], stroke: string, lines: (string | TemplateResult)[], entity?: string) => {
+  /** Bolita de 80 px: icono arriba y textos debajo (o un dato secundario encima del icono), con su nombre fuera. */
+  const ball = (id: keyof Layout["balls"], ring: string | TemplateResult, icon: string, iconColor: string,
+    lines: { t: string; cls?: string; style?: string }[], entity: string | undefined, name?: string, nameBelow = false) => {
     const p = b[id];
-    const step = 12, y0 = p.cy - ((lines.length - 1) * step) / 2 + 4;
+    const top = lines.filter((x) => x.cls === "sec"), rest = lines.filter((x) => x.cls !== "sec");
+    const iconY = p.cy - 20 + (top.length ? 6 : 0) - (rest.length > 1 ? 4 : 0);
     return svg`<g data-ball=${id} class="hit" @click=${click(entity)}>
-      <circle cx=${p.cx} cy=${p.cy} r=${p.r} fill="var(--card-background-color, #1c1c1c)" stroke=${stroke} stroke-width="2.2"></circle>
-      ${lines.map((t, i) => svg`<text x=${p.cx} y=${y0 + i * step} text-anchor="middle" class=${i === 0 ? "sec" : "val"}>${t}</text>`)}
+      ${typeof ring === "string"
+        ? svg`<circle cx=${p.cx} cy=${p.cy} r=${p.r} style=${`fill: var(--card-background-color, #1c1c1c); stroke: ${ring}`} stroke-width="2"></circle>`
+        : ring}
+      ${top.map((x) => svg`<text x=${p.cx} y=${p.cy - 24} text-anchor="middle" class="sec">${x.t}</text>`)}
+      <svg class="icon" x=${p.cx - 11} y=${iconY} width="22" height="22" viewBox="0 0 24 24"><path d=${icon} style=${`fill: ${iconColor}`}></path></svg>
+      ${rest.map((x, i) => svg`<text x=${p.cx} y=${iconY + 36 + i * 13} text-anchor="middle" class=${`val ${x.cls ?? ""}`} style=${x.style ?? ""}>${x.t}</text>`)}
+      ${name ? svg`<text class="name" x=${p.cx} y=${nameBelow ? p.cy + p.r + 15 : p.cy - p.r - 7} text-anchor="middle">${name}</text>` : nothing}
     </g>`;
   };
 
-  const batt = top.charge > 0 ? `↓ ${power(top.charge)}` : top.discharge > 0 ? `↑ ${power(top.discharge)}` : power(0);
+  // Anillo de la casa: tramos por origen de la energía (solar, batería, red limpia y red fósil), como power-flow-card-plus.
+  const nonFossilHome = top.lowCarbon === null ? 0 : (flows.gridToHome * Math.max(0, Math.min(100, top.lowCarbon))) / 100;
+  const sources: [string, number, string][] = [
+    ["solar", flows.solarToHome, ENERGY.solar], ["battery", flows.batteryToHome, ENERGY.batteryOut],
+    ["nonfossil", nonFossilHome, ENERGY.nonFossil], ["fossil", flows.gridToHome - nonFossilHome, ENERGY.gridIn],
+  ];
+  const total = sources.reduce((acc, [, w]) => acc + w, 0);
+  let offset = 0;
+  const h = b.home;
+  const homeRing = svg`<circle cx=${h.cx} cy=${h.cy} r=${R} style="fill: var(--card-background-color, #1c1c1c); stroke: var(--divider-color, #444)" stroke-width="2"></circle>
+    ${total > 0 ? sources.map(([key, w, col]) => {
+      const len = (CIRC * w) / total;
+      const seg = svg`<circle data-seg=${key} cx=${h.cx} cy=${h.cy} r=${R} fill="none" style=${`stroke: ${col}`} stroke-width="2.6"
+        stroke-dasharray=${`${len.toFixed(2)} ${(CIRC - len).toFixed(2)}`} stroke-dashoffset=${(-offset).toFixed(2)}
+        transform=${`rotate(-90 ${h.cx} ${h.cy})`}></circle>`;
+      offset += len;
+      return seg;
+    }) : nothing}`;
+
+  const charging = top.charge > 0, discharging = top.discharge > 0;
+  const batt = charging ? `↓ ${power(top.charge)}` : discharging ? `↑ ${power(top.discharge)}` : power(0);
+  const battColor = charging ? ENERGY.batteryIn : ENERGY.batteryOut;
+  const gridColor = top.gridOut > top.gridIn ? ENERGY.gridOut : ENERGY.gridIn;
   const gradients = l.bands.map((band) => svg`<linearGradient id=${`g-${band.id}`} x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color=${color.get(band.parent)}></stop><stop offset="1" stop-color=${color.get(band.id)}></stop></linearGradient>`);
 
@@ -99,16 +148,22 @@ export function renderSvg(l: Layout, tree: TreeValue, top: TopValues, flows: Top
   const home = l.bars[0];
   return svg`<svg class="flow" viewBox=${`0 0 ${l.width} ${l.forecastY}`} preserveAspectRatio="xMidYMin meet">
     <defs>${gradients}</defs>
-    ${(Object.keys(l.topLines) as (keyof TopFlows)[]).map(topLine)}
+    ${(Object.keys(l.topLines) as TopLine[]).map((k) => topLine(k, l.topLines[k]))}
+    ${top.lowCarbon !== null ? topLine("gridNonFossil", l.ecoLine) : nothing}
     <path d=${`M${b.home.cx},${b.home.cy + b.home.r} L${b.home.cx},${home.y}`} stroke=${COLORS.home} stroke-width="2" fill="none"></path>
     ${l.links.map((d) => svg`<path d=${d} stroke="var(--divider-color, #555)" stroke-width="1.5" fill="none"></path>`)}
     ${bands}
     <rect x=${home.x} y=${home.y} width=${home.w} height=${home.h} rx="3" fill=${COLORS.home}></rect>
     ${bars}
-    ${ball("grid", COLORS.grid, ["⚡", svg`<tspan fill=${COLORS.grid}>→ ${power(top.gridIn)}</tspan>`, svg`<tspan fill=${COLORS.gridOut}>← ${power(top.gridOut)}</tspan>`], x.entities.grid)}
-    ${top.lowCarbon !== null ? ball("eco", COLORS.eco, ["🍃", `${Math.round(top.lowCarbon)} %`], x.entities.eco) : nothing}
-    ${ball("battery", COLORS.battery, [`🔋 ${top.soc !== null ? `${Math.round(top.soc)} %` : "—"}`, batt], x.entities.battery)}
-    ${ball("solar", COLORS.solar, [...(x.solarSecondary ? [x.solarSecondary] : []), "☀", power(top.solar)], x.entities.solar)}
-    ${ball("home", COLORS.home, [...(x.homeSecondary ? [x.homeSecondary] : []), "🏠", power(tree.watts)], x.entities.home)}
+    ${ball("grid", gridColor, mdiTransmissionTower, gridColor, [
+      { t: `→ ${power(top.gridIn)}`, cls: "in", style: `fill: ${ENERGY.gridIn}` },
+      { t: `← ${power(top.gridOut)}`, cls: "out", style: `fill: ${ENERGY.gridOut}` }], x.entities.grid, x.names.grid)}
+    ${top.lowCarbon !== null ? ball("eco", ENERGY.nonFossil, mdiLeaf, ENERGY.nonFossil, [{ t: power(flows.gridNonFossil) }], x.entities.eco, x.names.eco) : nothing}
+    ${ball("battery", battColor, batteryIcon(top.soc), battColor, [
+      { t: top.soc !== null ? `${Math.round(top.soc)} %` : "—", cls: "soc" }, { t: batt }], x.entities.battery, x.names.battery, true)}
+    ${ball("solar", ENERGY.solar, mdiSolarPower, ENERGY.solar, [...(x.solarSecondary ? [{ t: x.solarSecondary, cls: "sec" }] : []), { t: power(top.solar) }],
+      x.entities.solar, x.names.solar, true)}
+    ${ball("home", homeRing, mdiHome, "var(--primary-text-color)", [...(x.homeSecondary ? [{ t: x.homeSecondary, cls: "sec" }] : []), { t: power(tree.watts) }],
+      x.entities.home)}
   </svg>`;
 }
