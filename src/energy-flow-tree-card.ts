@@ -10,7 +10,7 @@ import type { CardConfig } from "./types";
 import "./editor";
 
 export const CARD_TAG = "energy-flow-tree-card";
-export const CARD_VERSION = "0.6.0";
+export const CARD_VERSION = "0.6.1";
 /** Mantener pulsado más de esto abre el detalle de la entidad en vez de tocar. */
 const HOLD_MS = 500;
 

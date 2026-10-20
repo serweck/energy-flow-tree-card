@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1 · 2026-10-20
+
+- La tarjeta ya no cambia de tamaño con el Sankey abierto: si un consumo muy grande no deja sitio en su fila, encogen las corrientes en vez de ensancharse (y reescalarse) el dibujo.
+
 ## 0.6.0 · 2026-10-17
 
 - El Sankey sale cerrado por defecto (se abre tocando la casa; `sankey_open: true` para que salga abierto).

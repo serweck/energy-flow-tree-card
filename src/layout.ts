@@ -118,14 +118,11 @@ function fit(widths: number[], room: number): number[] {
   return widths.map((w) => (w > MIN_BAND ? (w * (room - fixed)) / big : w));
 }
 
-export function layoutCard(tree: TreeValue, width = BASE): Layout {
-  const all = rows(tree);
-  const homeW = BASE * HOME_FRAC;
+/** Anchos de las corrientes de cada fila con la barra de la casa a homeW px. */
+function bandWidths(all: Item[][], tree: TreeValue, homeW: number): number[][] {
   const px = tree.watts && tree.watts > 0 ? homeW / tree.watts : 0;
-
-  // 1.ª pasada: anchos de cada corriente (no dependen de la posición).
   const widthOf = new Map<string, number>([["home", homeW]]);
-  const rowWidths = all.map((row) => {
+  return all.map((row) => {
     const ws = row.map((i) => (i.node.watts && i.node.watts > 0 ? Math.max(MIN_BAND, i.node.watts * px) : 0));
     const byParent = new Map<string, number[]>();
     row.forEach((i, k) => byParent.set(i.parent, [...(byParent.get(i.parent) ?? []), k]));
@@ -136,11 +133,27 @@ export function layoutCard(tree: TreeValue, width = BASE): Layout {
     row.forEach((i, k) => widthOf.set(i.node.id, ws[k]));
     return ws;
   });
+}
 
-  // Ancho del dibujo: el que pida la fila más apretada.
-  const rowSlots = all.map((row, r) => row.map((i, k): Slot => ({ w: rowWidths[r][k], l: labelW(i.node.name) })));
+export function layoutCard(tree: TreeValue, width = BASE): Layout {
+  const all = rows(tree);
+  const slotsOf = (rw: number[][]) => all.map((row, r) => row.map((i, k): Slot => ({ w: rw[r][k], l: labelW(i.node.name) })));
   const span = (sl: Slot[]) => sl.slice(1).reduce((a, x, i) => a + need(sl[i], x), 0);
-  const W = Math.max(width, ...rowSlots.map((sl) => pad(sl[0]) + pad(sl[sl.length - 1]) + span(sl)));
+  const widest = (rs: Slot[][]) => Math.max(0, ...rs.map((sl) => pad(sl[0]) + pad(sl[sl.length - 1]) + span(sl)));
+
+  // Anchos de las corrientes: si una muy ancha no deja sitio en su fila, encogen todas (la barra de la casa también)
+  // en vez de ensancharse el dibujo, para que la tarjeta no cambie de tamaño con los vatios.
+  let homeW = BASE * HOME_FRAC;
+  let rowWidths = bandWidths(all, tree, homeW);
+  let rowSlots = slotsOf(rowWidths);
+  while (widest(rowSlots) > width && homeW > 10) {
+    homeW *= 0.9;
+    rowWidths = bandWidths(all, tree, homeW);
+    rowSlots = slotsOf(rowWidths);
+  }
+
+  // Ancho del dibujo: el que pida la fila más apretada (solo crece si ni con las corrientes finas caben los textos).
+  const W = Math.max(width, widest(rowSlots));
   const dx = (W - BASE) / 2;
   const { balls, topLines, ecoLine } = topBlock(dx);
 

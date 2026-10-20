@@ -155,6 +155,16 @@ describe("layoutCard", () => {
       }
   });
 
+  it("el tamaño del dibujo no cambia con los vatios: si una corriente muy ancha no cabe, encogen las corrientes", () => {
+    const watts = [{}, { "sensor.subcuadro_potencia": "1700", "sensor.calentador_agua_power": "1500" }, { "sensor.subcuadro_potencia": "1900", "sensor.calentador_agua_power": "1900" }, { "sensor.power_metter_01_power_a": "1800" }];
+    const ls = watts.map((w) => layoutCard(buildTree(CONFIG, fakeHass({ ...EXAMPLE, ...w }))));
+    for (const l of ls) {
+      expect(l.width).toBe(400);
+      expect(l.height).toBe(L.height);
+      for (const b of l.bars) expect(b.x + b.w).toBeLessThanOrEqual(l.width - 4 + 1e-9);
+    }
+  });
+
   it("con la casa a 0 W no divide por cero", () => {
     const zeros = Object.fromEntries(Object.entries(EXAMPLE).map(([k, v]) => [k, Array.isArray(v) ? v : "0"])) as typeof EXAMPLE;
     const l = layoutCard(buildTree(CONFIG, fakeHass(zeros)));
